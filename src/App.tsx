@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, Suspense, lazy } from 'react'
 import { createPortal } from 'react-dom'
 import { useLocalStorage } from './hooks/useLocalStorage'
 import { useTimer } from './hooks/useTimer'
@@ -6,11 +6,7 @@ import { useBackgroundMedia } from './hooks/useBackgroundMedia'
 import { useWidgetLayout } from './hooks/useWidgetLayout'
 import { usePictureInPicture, isPiPSupported } from './hooks/usePictureInPicture'
 import { TimerDisplay } from './components/TimerDisplay'
-import { AmbientMixer } from './components/AmbientMixer'
-import { SpotifyEmbed } from './components/SpotifyEmbed'
 import { TaskList } from './components/TaskList'
-import { StatsWidget } from './components/StatsWidget'
-import { SettingsDialog } from './components/SettingsDialog'
 import { DraggableWidget } from './components/DraggableWidget'
 import { PresenceCheckModal } from './components/PresenceCheckModal'
 import { PipTimerView } from './components/PipTimerView'
@@ -22,6 +18,11 @@ import { fontFamilyFor } from './fonts'
 import { playAlertBeep, playPauseSound, playResetSound, playStartSound } from './lib/sounds'
 import { notifySessionComplete } from './lib/notify'
 import type { BackgroundOption, SessionType, Stats, Task, ThemeSettings, TimerSettings } from './types'
+
+const AmbientMixer = lazy(() => import('./components/AmbientMixer').then((m) => ({ default: m.AmbientMixer })))
+const SpotifyEmbed = lazy(() => import('./components/SpotifyEmbed').then((m) => ({ default: m.SpotifyEmbed })))
+const StatsWidget = lazy(() => import('./components/StatsWidget').then((m) => ({ default: m.StatsWidget })))
+const SettingsDialog = lazy(() => import('./components/SettingsDialog').then((m) => ({ default: m.SettingsDialog })))
 
 function DragHandle() {
   return (
@@ -77,6 +78,8 @@ function App() {
   const {
     layout,
     sizes,
+    minimized,
+    toggleMinimized,
     setPosition,
     setSize,
     resetLayout,
@@ -216,13 +219,17 @@ function App() {
             }
           />
           <PopoverContent className="bg-[#13141a]/95 backdrop-blur-2xl border border-white/10 text-white p-4 rounded-2xl shadow-2xl w-[260px]">
-            <StatsWidget stats={stats} accentColor={theme.accentColor} />
+            <Suspense fallback={null}>
+              <StatsWidget stats={stats} accentColor={theme.accentColor} />
+            </Suspense>
           </PopoverContent>
         </Popover>
         </div>
         <div className="flex items-center gap-2">
-          <AmbientMixer buttonHidden={!theme.showMediaButtons} />
-          <SpotifyEmbed buttonHidden={!theme.showMediaButtons} />
+          <Suspense fallback={null}>
+            <AmbientMixer buttonHidden={!theme.showMediaButtons} />
+            <SpotifyEmbed buttonHidden={!theme.showMediaButtons} />
+          </Suspense>
           {theme.showMediaButtons && isPiPSupported() && (
             <button
               onClick={() => (pip.isOpen ? pip.close() : pip.open())}
@@ -235,15 +242,17 @@ function App() {
               </svg>
             </button>
           )}
-          <SettingsDialog
-            settings={settings}
-            setSettings={setSettings}
-            theme={theme}
-            setTheme={setTheme}
-            backgrounds={customBackgrounds}
-            setBackgrounds={setCustomBackgrounds}
-            mediaUrls={mediaUrls}
-          />
+          <Suspense fallback={null}>
+            <SettingsDialog
+              settings={settings}
+              setSettings={setSettings}
+              theme={theme}
+              setTheme={setTheme}
+              backgrounds={customBackgrounds}
+              setBackgrounds={setCustomBackgrounds}
+              mediaUrls={mediaUrls}
+            />
+          </Suspense>
         </div>
       </header>
 
@@ -271,10 +280,13 @@ function App() {
       <main className="relative z-10 flex flex-col items-center gap-6 px-4 pt-24 pb-10 w-full max-h-screen overflow-y-auto">
         <DraggableWidget
           id="timer"
+          title="Timer"
           position={layout.timer}
           size={sizes.timer}
           onMove={(pos) => setPosition('timer', pos)}
           onResize={(sz) => setSize('timer', sz)}
+          minimized={minimized.timer}
+          onToggleMinimize={() => toggleMinimized('timer')}
           minWidth={340}
           minHeight={420}
         >
@@ -284,7 +296,9 @@ function App() {
             }`}
           >
             <DragHandle />
-            {activeTask && <p className="text-white/70 text-sm">Working on: {activeTask.title}</p>}
+            <p className={`text-white/70 text-sm ${activeTask ? '' : 'invisible'}`}>
+              Working on: {activeTask?.title ?? ' '}
+            </p>
 
             <TimerDisplay
               secondsLeft={timer.secondsLeft}
@@ -362,10 +376,13 @@ function App() {
         {theme.showTasks && (
         <DraggableWidget
           id="tasks"
+          title="Tasks"
           position={layout.tasks}
           size={sizes.tasks}
           onMove={(pos) => setPosition('tasks', pos)}
           onResize={(sz) => setSize('tasks', sz)}
+          minimized={minimized.tasks}
+          onToggleMinimize={() => toggleMinimized('tasks')}
           minWidth={260}
           minHeight={200}
         >

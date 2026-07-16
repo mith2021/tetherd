@@ -25,9 +25,18 @@ export interface SavedLayout {
 export function useWidgetLayout(ids: string[]) {
   const empty = Object.fromEntries(ids.map((id) => [id, null])) as WidgetLayout
   const emptySizes = Object.fromEntries(ids.map((id) => [id, null])) as WidgetSizes
+  const emptyMinimized = Object.fromEntries(ids.map((id) => [id, false])) as Record<string, boolean>
   const [layout, setLayout] = useLocalStorage<WidgetLayout>('pomo-widget-layout-v2', empty)
   const [sizes, setSizes] = useLocalStorage<WidgetSizes>('pomo-widget-sizes-v1', emptySizes)
   const [savedLayouts, setSavedLayouts] = useLocalStorage<Record<string, SavedLayout>>('pomo-saved-layouts', {})
+  const [minimized, setMinimizedState] = useLocalStorage<Record<string, boolean>>(
+    'pomo-widget-minimized-v1',
+    emptyMinimized
+  )
+
+  function toggleMinimized(id: string) {
+    setMinimizedState((prev) => ({ ...prev, [id]: !prev[id] }))
+  }
 
   function setPosition(id: string, pos: WidgetPosition) {
     setLayout((prev) => ({ ...prev, [id]: pos }))
@@ -66,6 +75,8 @@ export function useWidgetLayout(ids: string[]) {
   return {
     layout,
     sizes,
+    minimized,
+    toggleMinimized,
     setPosition,
     setSize,
     resetLayout,

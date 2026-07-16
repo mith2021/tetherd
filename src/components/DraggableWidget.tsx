@@ -3,10 +3,13 @@ import type { WidgetPosition, WidgetSize } from '../hooks/useWidgetLayout'
 
 interface Props {
   id: string
+  title: string
   position: WidgetPosition | null
   size: WidgetSize | null
   onMove: (pos: WidgetPosition) => void
   onResize: (size: WidgetSize) => void
+  minimized?: boolean
+  onToggleMinimize?: () => void
   minWidth?: number
   minHeight?: number
   children: React.ReactNode
@@ -17,10 +20,13 @@ interface Props {
 // fixed pixel placement (clamped to viewport) so free positioning never breaks responsive layout.
 // Size is tracked independently of position — resizing doesn't force a widget out of flow.
 export function DraggableWidget({
+  title,
   position,
   size,
   onMove,
   onResize,
+  minimized = false,
+  onToggleMinimize,
   minWidth = 220,
   minHeight = 120,
   children,
@@ -110,9 +116,23 @@ export function DraggableWidget({
     ? { position: 'fixed', left: position.x, top: position.y, zIndex: dragging || resizing ? 50 : 10 }
     : { position: 'relative', zIndex: dragging || resizing ? 50 : 'auto' }
 
-  if (size) {
+  if (size && !minimized) {
     style.width = size.width
     style.height = size.height
+  }
+
+  if (minimized) {
+    return (
+      <div ref={wrapperRef} onPointerDown={handlePointerDown} className="cursor-grab" style={{ ...style, touchAction: 'none' }}>
+        <button
+          onClick={onToggleMinimize}
+          className="glass-pill flex items-center gap-2 px-4 py-2 rounded-full text-white text-sm hover:brightness-125 transition"
+        >
+          <span>{title}</span>
+          <span className="text-white/50 text-xs">restore</span>
+        </button>
+      </div>
+    )
   }
 
   return (
@@ -122,6 +142,15 @@ export function DraggableWidget({
       className={`group ${dragging ? 'cursor-grabbing' : 'cursor-grab'} ${className ?? ''}`}
       style={{ ...style, touchAction: 'none' }}
     >
+      {onToggleMinimize && (
+        <button
+          onClick={onToggleMinimize}
+          title={`Minimize ${title}`}
+          className="absolute top-2 right-2 z-10 w-6 h-6 rounded-full bg-black/40 hover:bg-black/70 text-white/70 hover:text-white text-xs opacity-0 group-hover:opacity-100 transition flex items-center justify-center"
+        >
+          &minus;
+        </button>
+      )}
       <div className="w-full h-full overflow-auto">{children}</div>
       <div
         onPointerDown={handleResizePointerDown}
