@@ -26,7 +26,7 @@ const SettingsDialog = lazy(() => import('./components/SettingsDialog').then((m)
 
 function DragHandle() {
   return (
-    <div className="flex justify-center pb-2 opacity-40 hover:opacity-80 transition">
+    <div className="flex justify-center items-center w-full h-6 -mt-1 mb-1 cursor-grab opacity-40 hover:opacity-80 transition">
       <svg width="28" height="10" viewBox="0 0 28 10" fill="currentColor" className="text-white">
         <circle cx="4" cy="5" r="1.5" />
         <circle cx="10" cy="5" r="1.5" />

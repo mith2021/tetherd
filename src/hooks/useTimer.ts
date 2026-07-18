@@ -2,11 +2,29 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { SessionType, TimerSettings, Stats } from '../types'
 
 const todayKey = () => new Date().toISOString().slice(0, 10)
+const PERSIST_KEY = 'pomo-timer-state-v1'
 
 function durationFor(type: SessionType, settings: TimerSettings) {
   if (type === 'focus') return settings.focusMin * 60
   if (type === 'shortBreak') return settings.shortBreakMin * 60
   return settings.longBreakMin * 60
+}
+
+interface PersistedTimerState {
+  sessionType: SessionType
+  focusCount: number
+  secondsLeft: number
+  endTime: number | null // epoch ms, null if paused
+}
+
+function loadPersisted(settings: TimerSettings): PersistedTimerState {
+  try {
+    const raw = localStorage.getItem(PERSIST_KEY)
+    if (!raw) throw new Error('none')
+    return JSON.parse(raw) as PersistedTimerState
+  } catch {
+    return { sessionType: 'focus', focusCount: 0, secondsLeft: durationFor('focus', settings), endTime: null }
+  }
 }
 
 interface UseTimerArgs {
@@ -17,14 +35,47 @@ interface UseTimerArgs {
 }
 
 export function useTimer({ settings, onSessionComplete, setStats, requireConfirmOnFocusComplete }: UseTimerArgs) {
-  const [sessionType, setSessionType] = useState<SessionType>('focus')
-  const [focusCount, setFocusCount] = useState(0) // completed focus sessions this cycle
-  const [running, setRunning] = useState(false)
-  const [secondsLeft, setSecondsLeft] = useState(() => durationFor('focus', settings))
+  const initial = useRef(loadPersisted(settings)).current
+  // a persisted endTime already in the past means the session finished while the tab
+  // was closed/backgrounded — don't resume a live countdown, and flag it so a mount
+  // effect below can run completion exactly once
+  const restoredRunning = initial.endTime != null && initial.endTime > Date.now()
+  const restoredFinishedElsewhere = initial.endTime != null && initial.endTime <= Date.now()
+
+  const [sessionType, setSessionType] = useState<SessionType>(initial.sessionType)
+  const [focusCount, setFocusCount] = useState(initial.focusCount) // completed focus sessions this cycle
+  const [running, setRunning] = useState(restoredRunning)
+  const [secondsLeft, setSecondsLeft] = useState(() => {
+    if (restoredRunning) return Math.max(0, Math.ceil((initial.endTime! - Date.now()) / 1000))
+    if (restoredFinishedElsewhere) return 0
+    return initial.secondsLeft
+  })
   const [awaitingConfirm, setAwaitingConfirm] = useState(false)
 
-  const endTimeRef = useRef<number | null>(null) // epoch ms when timer should hit 0
+  const endTimeRef = useRef<number | null>(restoredRunning ? initial.endTime : null) // epoch ms when timer should hit 0
   const rafRef = useRef<number | null>(null)
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (restoredFinishedElsewhere) handleComplete()
+  }, [])
+
+  // persist enough state to survive a refresh: session type/count always, plus either
+  // the live endTime (if running) or the paused secondsLeft — never both, so a reload
+  // never resumes a countdown from stale wall-clock math
+  useEffect(() => {
+    const state: PersistedTimerState = {
+      sessionType,
+      focusCount,
+      secondsLeft,
+      endTime: running ? endTimeRef.current : null,
+    }
+    try {
+      localStorage.setItem(PERSIST_KEY, JSON.stringify(state))
+    } catch {
+      // storage full or unavailable — ignore
+    }
+  }, [sessionType, focusCount, secondsLeft, running])
 
   // keep secondsLeft accurate even if tab was backgrounded (drift-proof via Date.now)
   const tick = useCallback(() => {
@@ -72,14 +123,9 @@ export function useTimer({ settings, onSessionComplete, setStats, requireConfirm
     finishCompletion()
   }
 
-  // called directly by skip/break completions, or after user confirms presence
-  function finishCompletion() {
-    onSessionComplete(sessionType)
-
+  // advances to the next session type/auto-start, without logging a completed session
+  function advance() {
     if (sessionType === 'focus') {
-      setStats((prev) => ({
-        byDay: { ...prev.byDay, [todayKey()]: (prev.byDay[todayKey()] ?? 0) + 1 },
-      }))
       const nextCount = focusCount + 1
       setFocusCount(nextCount)
       const isLongBreak = nextCount % settings.longBreakInterval === 0
@@ -92,6 +138,17 @@ export function useTimer({ settings, onSessionComplete, setStats, requireConfirm
       setSecondsLeft(durationFor('focus', settings))
       if (settings.autoStartFocus) start('focus', settings)
     }
+  }
+
+  // called when a session actually finishes its full duration (or user confirms presence)
+  function finishCompletion() {
+    onSessionComplete(sessionType)
+    if (sessionType === 'focus') {
+      setStats((prev) => ({
+        byDay: { ...prev.byDay, [todayKey()]: (prev.byDay[todayKey()] ?? 0) + 1 },
+      }))
+    }
+    advance()
   }
 
   function start(type?: SessionType, s?: TimerSettings) {
@@ -117,10 +174,11 @@ export function useTimer({ settings, onSessionComplete, setStats, requireConfirm
     setSecondsLeft(durationFor(sessionType, settings))
   }
 
+  // user-initiated skip: never counts as a completed session, no stat logged
   function skip() {
     endTimeRef.current = null
     setRunning(false)
-    finishCompletion()
+    advance()
   }
 
   function switchType(type: SessionType) {

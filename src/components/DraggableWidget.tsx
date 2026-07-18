@@ -33,10 +33,11 @@ export function DraggableWidget({
   className,
 }: Props) {
   const wrapperRef = useRef<HTMLDivElement>(null)
-  const dragRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null)
+  const dragRef = useRef<{ startX: number; startY: number; origX: number; origY: number; moved: boolean } | null>(null)
   const resizeRef = useRef<{ startX: number; startY: number; origW: number; origH: number } | null>(null)
   const [dragging, setDragging] = useState(false)
   const [resizing, setResizing] = useState(false)
+  const justDraggedRef = useRef(false)
 
   // keep latest callbacks in refs so the window-listener effect below only mounts once —
   // re-subscribing mid-drag on every position/size update was dropping and reordering events
@@ -56,6 +57,7 @@ export function DraggableWidget({
       if (dragRef.current) {
         const dx = e.clientX - dragRef.current.startX
         const dy = e.clientY - dragRef.current.startY
+        if (Math.abs(dx) > 3 || Math.abs(dy) > 3) dragRef.current.moved = true
         const nextX = Math.min(window.innerWidth - 40, Math.max(0, dragRef.current.origX + dx))
         const nextY = Math.min(window.innerHeight - 40, Math.max(0, dragRef.current.origY + dy))
         onMoveRef.current({ x: nextX, y: nextY })
@@ -69,6 +71,8 @@ export function DraggableWidget({
       }
     }
     function handleWindowUp() {
+      // a real drag (moved past threshold) shouldn't also trigger the restore button's click
+      justDraggedRef.current = dragRef.current?.moved ?? false
       dragRef.current = null
       resizeRef.current = null
       setDragging(false)
@@ -89,14 +93,17 @@ export function DraggableWidget({
 
   function handlePointerDown(e: React.PointerEvent) {
     const target = e.target as HTMLElement
-    if (target.closest('button, input, a, [role="slider"], [role="checkbox"], [role="switch"], [role="tab"], label')) return
+    if (target.closest('input, a, [role="slider"], [role="checkbox"], [role="switch"], [role="tab"], label')) return
+    // minimized pill's restore button doubles as the drag handle: don't bail out on it,
+    // just require actual movement before treating it as a drag (see handleWindowMove/Up)
+    if (!minimized && target.closest('button')) return
 
     // first drag from flow mode: seed origin from current on-screen rect, not stored position
     const rect = wrapperRef.current?.getBoundingClientRect()
     const originX = position?.x ?? rect?.left ?? 0
     const originY = position?.y ?? rect?.top ?? 0
 
-    dragRef.current = { startX: e.clientX, startY: e.clientY, origX: originX, origY: originY }
+    dragRef.current = { startX: e.clientX, startY: e.clientY, origX: originX, origY: originY, moved: false }
     setDragging(true)
   }
 
@@ -125,7 +132,10 @@ export function DraggableWidget({
     return (
       <div ref={wrapperRef} onPointerDown={handlePointerDown} className="cursor-grab" style={{ ...style, touchAction: 'none' }}>
         <button
-          onClick={onToggleMinimize}
+          onClick={() => {
+            if (justDraggedRef.current) return
+            onToggleMinimize?.()
+          }}
           className="glass-pill flex items-center gap-2 px-4 py-2 rounded-full text-white text-sm hover:brightness-125 transition"
         >
           <span>{title}</span>
