@@ -95,10 +95,10 @@ export function StatsDialog({ stats, settings, accentColor, todayCount, trigger 
           </div>
 
           <TabsList className="bg-white/5">
-            <TabsTrigger value="analytics" className="text-white\60 data-active:text-white data-active:bg-white/15">
+            <TabsTrigger value="analytics" className="text-white/60 data-active:text-white data-active:bg-white/15">
               Analytics
             </TabsTrigger>
-            <TabsTrigger value="review" className="text-white\60 data-active:text-white data-active:bg-white/15">
+            <TabsTrigger value="review" className="text-white/60 data-active:text-white data-active:bg-white/15">
               Review Sessions
             </TabsTrigger>
           </TabsList>
