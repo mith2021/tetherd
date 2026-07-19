@@ -9,9 +9,10 @@ interface Props {
   setTasks: React.Dispatch<React.SetStateAction<Task[]>>
   activeTaskId: string | null
   setActiveTaskId: (id: string | null) => void
+  onTaskCompleted?: () => void
 }
 
-export function TaskList({ tasks, setTasks, activeTaskId, setActiveTaskId }: Props) {
+export function TaskList({ tasks, setTasks, activeTaskId, setActiveTaskId, onTaskCompleted }: Props) {
   const [title, setTitle] = useState('')
 
   function addTask() {
@@ -30,6 +31,8 @@ export function TaskList({ tasks, setTasks, activeTaskId, setActiveTaskId }: Pro
   }
 
   function toggleDone(id: string) {
+    const task = tasks.find((t) => t.id === id)
+    if (task && !task.done) onTaskCompleted?.()
     setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, done: !t.done } : t)))
   }
 

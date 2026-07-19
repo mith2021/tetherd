@@ -11,9 +11,13 @@ function toKey(d: Date) {
 
 const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 
+// heatmap grid only — surrounding summary numbers live in StatsDialog's tiles
 export function StatsWidget({ stats, accentColor }: Props) {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
+
+  const byDay: Record<string, number> = {}
+  for (const s of stats.sessions) byDay[s.date] = (byDay[s.date] ?? 0) + 1
 
   // 7x7 grid: last 49 days, oldest first, aligned to week columns like GitHub
   const start = new Date(today)
@@ -24,7 +28,7 @@ export function StatsWidget({ stats, accentColor }: Props) {
   const days: { date: Date; count: number }[] = []
   const cursor = new Date(start)
   while (cursor <= today) {
-    days.push({ date: new Date(cursor), count: stats.byDay[toKey(cursor)] ?? 0 })
+    days.push({ date: new Date(cursor), count: byDay[toKey(cursor)] ?? 0 })
     cursor.setDate(cursor.getDate() + 1)
   }
 
@@ -34,13 +38,6 @@ export function StatsWidget({ stats, accentColor }: Props) {
   }
 
   const maxCount = Math.max(1, ...days.map((d) => d.count))
-  const last7 = Object.entries(stats.byDay)
-    .filter(([key]) => {
-      const d = new Date(key)
-      const diff = (today.getTime() - d.getTime()) / (1000 * 60 * 60 * 24)
-      return diff >= 0 && diff < 7
-    })
-    .reduce((sum, [, count]) => sum + count, 0)
 
   function opacityFor(count: number) {
     if (count === 0) return 0.06
@@ -49,11 +46,6 @@ export function StatsWidget({ stats, accentColor }: Props) {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-baseline justify-between">
-        <span className="text-sm text-white/70">Last 7 days</span>
-        <span className="text-lg font-semibold text-white tabular-nums">{last7} sessions</span>
-      </div>
-
       <div className="flex gap-[3px]">
         <div className="flex flex-col gap-[3px] pt-[14px] pr-1">
           {DAY_LABELS.map((l, i) => (

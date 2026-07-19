@@ -71,7 +71,20 @@ function App() {
   const [customBackgrounds, setCustomBackgrounds] = useLocalStorage<BackgroundOption[]>('pomo-custom-bgs', [])
   const [tasks, setTasks] = useLocalStorage<Task[]>('pomo-tasks', [])
   const [activeTaskId, setActiveTaskId] = useLocalStorage<string | null>('pomo-active-task', null)
-  const [stats, setStats] = useLocalStorage<Stats>('pomo-stats', { sessions: [], tasksCompletedByDay: {} })
+  const [statsRaw, setStats] = useLocalStorage<Stats>('pomo-stats', { sessions: [], tasksCompletedByDay: {} })
+  // old schema stored { byDay: Record<date, count> } — synthesize one noon-hour
+  // session per count so the heatmap keeps its history after the sessions-log migration
+  const stats: Stats = useMemo(() => {
+    if (Array.isArray(statsRaw.sessions)) {
+      return { sessions: statsRaw.sessions, tasksCompletedByDay: statsRaw.tasksCompletedByDay ?? {} }
+    }
+    const legacyByDay = (statsRaw as unknown as { byDay?: Record<string, number> }).byDay ?? {}
+    const sessions = Object.entries(legacyByDay).flatMap(([date, count]) =>
+      Array.from({ length: count }, () => ({ date, startHour: 12, durationSec: settings.focusMin * 60 }))
+    )
+    return { sessions, tasksCompletedByDay: {} }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statsRaw])
 
   const mediaUrls = useBackgroundMedia(customBackgrounds)
 

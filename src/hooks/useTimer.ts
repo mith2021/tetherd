@@ -54,6 +54,7 @@ export function useTimer({ settings, onSessionComplete, setStats, requireConfirm
 
   const endTimeRef = useRef<number | null>(restoredRunning ? initial.endTime : null) // epoch ms when timer should hit 0
   const rafRef = useRef<number | null>(null)
+  const sessionStartRef = useRef<Date>(new Date()) // when the current running session began, for stats' startHour
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
@@ -144,8 +145,13 @@ export function useTimer({ settings, onSessionComplete, setStats, requireConfirm
   function finishCompletion() {
     onSessionComplete(sessionType)
     if (sessionType === 'focus') {
+      const start = sessionStartRef.current
       setStats((prev) => ({
-        byDay: { ...prev.byDay, [todayKey()]: (prev.byDay[todayKey()] ?? 0) + 1 },
+        ...prev,
+        sessions: [
+          ...prev.sessions,
+          { date: todayKey(), startHour: start.getHours(), durationSec: settings.focusMin * 60 },
+        ],
       }))
     }
     advance()
@@ -155,6 +161,7 @@ export function useTimer({ settings, onSessionComplete, setStats, requireConfirm
     const useType = type ?? sessionType
     const useSettings = s ?? settings
     const secs = secondsLeft > 0 && (type ?? sessionType) === sessionType ? secondsLeft : durationFor(useType, useSettings)
+    sessionStartRef.current = new Date()
     endTimeRef.current = Date.now() + secs * 1000
     setRunning(true)
   }

@@ -10,6 +10,7 @@ export interface TimerSettings {
   pauseOnTabAway: boolean
   confirmPresenceOnComplete: boolean
   presenceGraceSeconds: number
+  dailySessionGoal: number // target focus sessions/day, drives Focus Score stars
 }
 
 export interface Task {
@@ -41,7 +42,13 @@ export interface ThemeSettings {
   showMediaButtons: boolean // music + spotify + pip header buttons
 }
 
+export interface SessionRecord {
+  date: string // YYYY-MM-DD, local
+  startHour: number // 0-23, local hour the session started
+  durationSec: number
+}
+
 export interface Stats {
-  // date string YYYY-MM-DD -> focus sessions completed
-  byDay: Record<string, number>
+  sessions: SessionRecord[] // completed focus sessions only
+  tasksCompletedByDay: Record<string, number>
 }
