@@ -24,6 +24,7 @@ interface Props {
   backgrounds: BackgroundOption[]
   setBackgrounds: React.Dispatch<React.SetStateAction<BackgroundOption[]>>
   mediaUrls: Record<string, string>
+  webcamCameraError: string | null
 }
 
 const ACCENTS = ['#f97316', '#ef4444', '#22c55e', '#3b82f6', '#a855f7', '#ec4899', '#eab308']
@@ -48,6 +49,7 @@ export function SettingsDialog({
   backgrounds,
   setBackgrounds,
   mediaUrls,
+  webcamCameraError,
 }: Props) {
   const selectedMediaUrl = mediaUrls[theme.backgroundId]
 
@@ -195,6 +197,36 @@ export function SettingsDialog({
                   onValueChange={(v) => setSettings((s) => ({ ...s, presenceGraceSeconds: v as number }))}
                 />
               </Row>
+            )}
+
+            <Separator className="bg-white/10" />
+
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-sm text-white/70 block">Webcam presence detection</span>
+                <span className="text-xs text-white/40">
+                  Uses your camera to detect if you've stepped away — auto-pauses focus sessions. Video never
+                  leaves your device.
+                </span>
+              </div>
+              <Switch
+                checked={settings.webcamPresenceEnabled}
+                onCheckedChange={(v) => setSettings((s) => ({ ...s, webcamPresenceEnabled: v }))}
+              />
+            </div>
+            {settings.webcamPresenceEnabled && (
+              <>
+                <Row label="Away threshold" value={`${settings.webcamAwaySeconds}s`}>
+                  <Slider
+                    min={5}
+                    max={60}
+                    step={5}
+                    value={settings.webcamAwaySeconds}
+                    onValueChange={(v) => setSettings((s) => ({ ...s, webcamAwaySeconds: v as number }))}
+                  />
+                </Row>
+                {webcamCameraError && <p className="text-red-400 text-xs">{webcamCameraError}</p>}
+              </>
             )}
           </TabsContent>
 

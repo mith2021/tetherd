@@ -5,6 +5,7 @@ import { useTimer } from './hooks/useTimer'
 import { useBackgroundMedia } from './hooks/useBackgroundMedia'
 import { useWidgetLayout } from './hooks/useWidgetLayout'
 import { usePictureInPicture, isPiPSupported } from './hooks/usePictureInPicture'
+import { usePresenceDetection } from './hooks/usePresenceDetection'
 import { TimerDisplay } from './components/TimerDisplay'
 import { TaskList } from './components/TaskList'
 import { DraggableWidget } from './components/DraggableWidget'
@@ -47,6 +48,8 @@ const DEFAULT_SETTINGS: TimerSettings = {
   confirmPresenceOnComplete: false,
   presenceGraceSeconds: 120,
   dailySessionGoal: 4,
+  webcamPresenceEnabled: false,
+  webcamAwaySeconds: 15,
 }
 
 const DEFAULT_THEME: ThemeSettings = {
@@ -127,6 +130,20 @@ function App() {
   useEffect(() => {
     if (timer.awaitingConfirm) notifySessionComplete()
   }, [timer.awaitingConfirm])
+
+  const presence = usePresenceDetection({
+    enabled: settings.webcamPresenceEnabled,
+    active: timer.running && timer.sessionType === 'focus',
+    awayGraceSeconds: settings.webcamAwaySeconds,
+    onFaceLost: () => {
+      playPauseSound()
+      timer.pause()
+    },
+    onFacePresent: () => {
+      playStartSound()
+      timer.start()
+    },
+  })
 
   useEffect(() => {
     function handleKeydown(e: KeyboardEvent) {
@@ -239,6 +256,20 @@ function App() {
           </Suspense>
         </div>
         <div className="flex items-center gap-2">
+          {settings.webcamPresenceEnabled && (
+            <span
+              title={
+                presence.cameraError
+                  ? presence.cameraError
+                  : presence.isWatching
+                    ? 'Presence detection active'
+                    : 'Presence detection idle (starts with a focus session)'
+              }
+              className={`inline-block w-2.5 h-2.5 rounded-full ${
+                presence.cameraError ? 'bg-red-500' : presence.isWatching ? 'bg-green-500' : 'bg-white/20'
+              }`}
+            />
+          )}
           <Suspense fallback={null}>
             <AmbientMixer buttonHidden={!theme.showMediaButtons} />
             <SpotifyEmbed buttonHidden={!theme.showMediaButtons} />
@@ -265,6 +296,7 @@ function App() {
               backgrounds={customBackgrounds}
               setBackgrounds={setCustomBackgrounds}
               mediaUrls={mediaUrls}
+              webcamCameraError={presence.cameraError}
             />
           </Suspense>
         </div>
