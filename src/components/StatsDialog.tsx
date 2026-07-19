@@ -9,6 +9,7 @@ import {
   bestSessionSeconds,
   hourlyBuckets,
   focusScoreStars,
+  calculateStreaks,
   formatDuration,
   formatMinutes,
 } from '../lib/statsCompute'
@@ -27,9 +28,19 @@ function toKey(d: Date) {
   return d.toISOString().slice(0, 10)
 }
 
-function StatTile({ icon, label, value }: { icon: React.ReactNode; label: string; value: React.ReactNode }) {
+function StatTile({
+  icon,
+  label,
+  value,
+  title,
+}: {
+  icon: React.ReactNode
+  label: string
+  value: React.ReactNode
+  title?: string
+}) {
   return (
-    <div className="glass rounded-2xl p-4 space-y-3">
+    <div className="glass rounded-2xl p-4 space-y-3" title={title}>
       <div className="text-white/50">{icon}</div>
       <div>
         <p className="text-sm text-white/60">{label}</p>
@@ -117,6 +128,7 @@ export function StatsDialog({ stats, settings, accentColor, todayCount, trigger 
   const tasksCompleted = Object.entries(stats.tasksCompletedByDay)
     .filter(([date]) => date >= rangeStartKey && date <= rangeEndKey)
     .reduce((sum, [, count]) => sum + count, 0)
+  const streaks = calculateStreaks(stats.sessions)
 
   const selectedDateKey = toKey(selectedDate)
   const dayTotalSeconds = totalFocusedSeconds(sessionsInRange(stats.sessions, selectedDateKey, selectedDateKey))
@@ -176,7 +188,7 @@ export function StatsDialog({ stats, settings, accentColor, todayCount, trigger 
                 value={formatDuration(focusedSeconds)}
               />
               <StatTile
-                icon={<FlameIcon />}
+                icon={<TrophyIcon />}
                 label="Best Session"
                 value={formatMinutes(bestSeconds)}
               />
@@ -184,6 +196,12 @@ export function StatsDialog({ stats, settings, accentColor, todayCount, trigger 
                 icon={<CheckIcon />}
                 label="Tasks completed"
                 value={tasksCompleted}
+              />
+              <StatTile
+                icon={<FlameIcon />}
+                label="Streak"
+                value={`${streaks.current}d`}
+                title={`Longest streak: ${streaks.longest} day${streaks.longest === 1 ? '' : 's'}`}
               />
               <div className="glass rounded-2xl p-4 space-y-3 col-span-2">
                 <div className="text-white/50">
@@ -295,6 +313,14 @@ function TargetIcon() {
       <circle cx="12" cy="12" r="9" />
       <circle cx="12" cy="12" r="5" />
       <circle cx="12" cy="12" r="1" />
+    </svg>
+  )
+}
+function TrophyIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M8 21h8M12 17v4M7 4h10v4a5 5 0 0 1-10 0V4Z" />
+      <path d="M7 5H4a2 2 0 0 0 2 4M17 5h3a2 2 0 0 1-2 4" />
     </svg>
   )
 }
