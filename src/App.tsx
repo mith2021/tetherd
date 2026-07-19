@@ -12,7 +12,6 @@ import { PresenceCheckModal } from './components/PresenceCheckModal'
 import { PipTimerView } from './components/PipTimerView'
 import { LayoutsMenu } from './components/LayoutsMenu'
 import { Button } from '@/components/ui/button'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { PRESET_BACKGROUNDS } from './backgrounds'
 import { fontFamilyFor } from './fonts'
 import { playAlertBeep, playPauseSound, playResetSound, playStartSound } from './lib/sounds'
@@ -21,7 +20,7 @@ import type { BackgroundOption, SessionType, Stats, Task, ThemeSettings, TimerSe
 
 const AmbientMixer = lazy(() => import('./components/AmbientMixer').then((m) => ({ default: m.AmbientMixer })))
 const SpotifyEmbed = lazy(() => import('./components/SpotifyEmbed').then((m) => ({ default: m.SpotifyEmbed })))
-const StatsWidget = lazy(() => import('./components/StatsWidget').then((m) => ({ default: m.StatsWidget })))
+const StatsDialog = lazy(() => import('./components/StatsDialog').then((m) => ({ default: m.StatsDialog })))
 const SettingsDialog = lazy(() => import('./components/SettingsDialog').then((m) => ({ default: m.SettingsDialog })))
 
 function DragHandle() {
@@ -47,6 +46,7 @@ const DEFAULT_SETTINGS: TimerSettings = {
   pauseOnTabAway: false,
   confirmPresenceOnComplete: false,
   presenceGraceSeconds: 120,
+  dailySessionGoal: 4,
 }
 
 const DEFAULT_THEME: ThemeSettings = {
@@ -71,7 +71,7 @@ function App() {
   const [customBackgrounds, setCustomBackgrounds] = useLocalStorage<BackgroundOption[]>('pomo-custom-bgs', [])
   const [tasks, setTasks] = useLocalStorage<Task[]>('pomo-tasks', [])
   const [activeTaskId, setActiveTaskId] = useLocalStorage<string | null>('pomo-active-task', null)
-  const [stats, setStats] = useLocalStorage<Stats>('pomo-stats', { byDay: {} })
+  const [stats, setStats] = useLocalStorage<Stats>('pomo-stats', { sessions: [], tasksCompletedByDay: {} })
 
   const mediaUrls = useBackgroundMedia(customBackgrounds)
 
@@ -98,9 +98,9 @@ function App() {
         prev.map((t) => (t.id === activeTaskId ? { ...t, completedPomodoros: t.completedPomodoros + 1 } : t))
       )
     }
-    document.title = 'Session complete! — Pomodoro'
+    document.title = 'Session complete! — Tetherd'
     setTimeout(() => {
-      if (document.title.startsWith('Session complete')) document.title = 'Pomodoro'
+      if (document.title.startsWith('Session complete')) document.title = 'Tetherd'
     }, 4000)
   }
 
@@ -162,7 +162,7 @@ function App() {
     const label = timer.sessionType === 'focus' ? 'Focus' : timer.sessionType === 'shortBreak' ? 'Break' : 'Long Break'
     document.title = timer.running
       ? `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')} — ${label}`
-      : 'Pomodoro'
+      : 'Tetherd'
   }, [timer.secondsLeft, timer.running, timer.sessionType])
 
   const allBackgrounds = useMemo(() => [...PRESET_BACKGROUNDS, ...customBackgrounds], [customBackgrounds])
@@ -172,7 +172,8 @@ function App() {
   const isVideoBg = activeBg.kind === 'video'
 
   const activeTask = tasks.find((t) => t.id === activeTaskId)
-  const todayCount = stats.byDay[new Date().toISOString().slice(0, 10)] ?? 0
+  const todayKeyStr = new Date().toISOString().slice(0, 10)
+  const todayCount = stats.sessions.filter((s) => s.date === todayKeyStr).length
 
   // reserve space below the ring for label/controls/session pills; clamp so it never overflows the widget
   const ringSize = sizes.timer ? Math.max(160, Math.min(sizes.timer.width - 80, sizes.timer.height - 180)) : 300
@@ -210,20 +211,19 @@ function App() {
 
       <header className="absolute top-0 left-0 right-0 flex items-center justify-between px-6 py-4 z-[60]">
         <div className={theme.showStatsChip ? '' : 'invisible'}>
-        <Popover>
-          <PopoverTrigger
-            render={
-              <button className="glass-pill text-white text-base font-medium px-4 py-2 rounded-full hover:brightness-125 transition">
-                {todayCount} focus session{todayCount === 1 ? '' : 's'} today
-              </button>
-            }
-          />
-          <PopoverContent className="bg-[#13141a]/95 backdrop-blur-2xl border border-white/10 text-white p-4 rounded-2xl shadow-2xl w-[260px]">
-            <Suspense fallback={null}>
-              <StatsWidget stats={stats} accentColor={theme.accentColor} />
-            </Suspense>
-          </PopoverContent>
-        </Popover>
+          <Suspense fallback={null}>
+            <StatsDialog
+              stats={stats}
+              settings={settings}
+              accentColor={theme.accentColor}
+              todayCount={todayCount}
+              trigger={
+                <button className="glass-pill text-white text-base font-medium px-4 py-2 rounded-full hover:brightness-125 transition">
+                  {todayCount} focus session{todayCount === 1 ? '' : 's'} today
+                </button>
+              }
+            />
+          </Suspense>
         </div>
         <div className="flex items-center gap-2">
           <Suspense fallback={null}>
@@ -390,7 +390,19 @@ function App() {
             className={`glass rounded-2xl p-4 ${sizes.tasks ? 'w-full h-full' : 'w-[92vw] max-w-80'}`}
           >
             <DragHandle />
-            <TaskList tasks={tasks} setTasks={setTasks} activeTaskId={activeTaskId} setActiveTaskId={setActiveTaskId} />
+            <TaskList
+              tasks={tasks}
+              setTasks={setTasks}
+              activeTaskId={activeTaskId}
+              setActiveTaskId={setActiveTaskId}
+              onTaskCompleted={() => {
+                const key = new Date().toISOString().slice(0, 10)
+                setStats((prev) => ({
+                  ...prev,
+                  tasksCompletedByDay: { ...prev.tasksCompletedByDay, [key]: (prev.tasksCompletedByDay[key] ?? 0) + 1 },
+                }))
+              }}
+            />
           </div>
         </DraggableWidget>
         )}

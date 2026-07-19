@@ -12,7 +12,20 @@ const targets = [
   ["public/icon-512.png", 512],
 ];
 
+// source logo has ~8% empty margin baked in around the rounded-square card,
+// making the glyph read smaller than other apps' icons at the same taskbar size —
+// crop that margin off before resizing so the art fills the full icon canvas
+const meta = await sharp(src).metadata();
+const cropPct = 0.08;
+const cropPx = Math.round(Math.min(meta.width, meta.height) * cropPct);
+const cropped = sharp(src).extract({
+  left: cropPx,
+  top: cropPx,
+  width: meta.width - cropPx * 2,
+  height: meta.height - cropPx * 2,
+});
+
 for (const [file, size] of targets) {
-  await sharp(src).resize(size, size).png().toFile(path.join(root, file));
+  await cropped.clone().resize(size, size).png().toFile(path.join(root, file));
   console.log(`wrote ${file} (${size}x${size})`);
 }

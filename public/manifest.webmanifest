@@ -1,7 +1,7 @@
 {
-  "name": "Pomodoro",
-  "short_name": "Pomodoro",
-  "description": "A customizable, aesthetic Pomodoro focus timer.",
+  "name": "Tetherd",
+  "short_name": "Tetherd",
+  "description": "Tetherd — a customizable, aesthetic Pomodoro focus timer.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0f1115",
