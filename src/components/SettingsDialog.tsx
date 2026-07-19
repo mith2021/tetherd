@@ -67,7 +67,7 @@ export function SettingsDialog({
           </Button>
         }
       />
-      <DialogContent className="bg-[#13141a]/90 backdrop-blur-2xl border-white/10 text-white sm:max-w-lg max-h-[85vh] overflow-y-auto shadow-2xl">
+      <DialogContent className="glass-dark border-white/10 text-white sm:max-w-lg max-h-[85vh] overflow-y-auto shadow-2xl">
         <DialogHeader>
           <DialogTitle>Settings</DialogTitle>
         </DialogHeader>

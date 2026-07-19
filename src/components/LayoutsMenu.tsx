@@ -33,7 +33,7 @@ export function LayoutsMenu({ savedLayouts, onSave, onApply, onDelete }: Props) 
       />
       <PopoverContent
         side="top"
-        className="bg-[#13141a]/95 backdrop-blur-2xl border border-white/10 text-white p-4 rounded-2xl shadow-2xl w-72"
+        className="glass-dark text-white p-4 rounded-2xl shadow-2xl w-72"
       >
         <div className="space-y-3">
           <span className="text-sm font-medium text-white/80">Saved layouts</span>

@@ -49,7 +49,7 @@ export function AmbientMixer({ buttonHidden = false }: { buttonHidden?: boolean 
             </button>
           }
         />
-        <PopoverContent className="bg-[#13141a]/95 backdrop-blur-2xl border border-white/10 text-white p-4 rounded-2xl shadow-2xl w-80">
+        <PopoverContent className="glass-dark text-white p-4 rounded-2xl shadow-2xl w-80">
           <div className="space-y-2">
             <span className="text-sm font-medium text-white/80">Music / ambient sound</span>
             <p className="text-xs text-white/40">

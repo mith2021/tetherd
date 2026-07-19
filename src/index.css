@@ -180,4 +180,16 @@ body {
       0 4px 16px rgba(0, 0, 0, 0.2),
       inset 0 1px 0 rgba(255, 255, 255, calc(0.18 * var(--glass-alpha, 1)));
   }
+
+  /* dark solid variant for text-heavy floating chrome (dialogs, popovers) — same
+     --glass-blur/--glass-alpha vars as .glass so the slider still applies, but keeps
+     the higher-contrast dark tint instead of .glass's light frosted look */
+  .glass-dark {
+    /* !important: DialogContent/PopoverContent ship a bg-popover utility class in their
+       own base styles, which otherwise wins the cascade over this component-layer rule */
+    background: rgba(19, 20, 26, calc(0.9 * var(--glass-alpha, 1))) !important;
+    backdrop-filter: blur(var(--glass-blur, 20px)) saturate(160%);
+    -webkit-backdrop-filter: blur(var(--glass-blur, 20px)) saturate(160%);
+    border: 1px solid rgba(255, 255, 255, calc(0.1 * var(--glass-alpha, 1)));
+  }
 }

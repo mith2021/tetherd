@@ -88,7 +88,7 @@ export function StatsDialog({ stats, settings, accentColor, todayCount, trigger 
   return (
     <Dialog>
       <DialogTrigger render={trigger} />
-      <DialogContent className="bg-[#13141a]/90 backdrop-blur-2xl border-white/10 text-white sm:max-w-xl max-h-[85vh] overflow-y-auto shadow-2xl">
+      <DialogContent className="glass-dark border-white/10 text-white sm:max-w-xl max-h-[85vh] overflow-y-auto shadow-2xl">
         <Tabs defaultValue="analytics">
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-lg font-bold">Activities summary</h2>
