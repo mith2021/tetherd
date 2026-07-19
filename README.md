@@ -1,32 +1,43 @@
-# React + TypeScript + Vite
+# Tetherd
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+A Pomodoro timer that stays out of your way — and looks like it belongs on your screen, not bolted onto it.
 
-Currently, two official plugins are available:
+**[Try it live →](https://mith2021.github.io/tetherd/)** — no signup, nothing to install.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+![Tetherd demo](./docs/demo.gif)
 
-## React Compiler
+## Why
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Most Pomodoro timers look like a Pomodoro timer. Tetherd is built to actually match *your* setup — custom video/image/gif backgrounds, a glassmorphic UI with an adjustable blur/transparency slider, five timer fonts, and configurable accent colors. Drag and resize every widget, save layout presets, and hide any element you don't want on screen.
 
-## Expanding the Oxlint configuration
+## Features
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+- **Custom backgrounds** — upload your own image, gif, or video; reposition and adjust overlay darkness
+- **Glass UI** — blur/transparency intensity is a live slider, not a fixed theme
+- **Drag & resize widgets** — timer, tasks, stats — with saved layout presets
+- **5 timer fonts**, configurable accent color
+- **Tasks with pomodoro counts**, session tracking, stats heatmap
+- **Ambient sound mixer** + YouTube/Spotify embeds that keep playing even when popovers close
+- **Picture-in-Picture** timer (Chromium)
+- **Keyboard shortcuts** — Space (start/pause), R (reset), S (skip)
+- **Tab-away pause** + optional presence confirmation before logging a completed session
+- Everything runs client-side — no account, no server, no tracking. Backgrounds are stored locally in your browser (IndexedDB).
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+## Tech
+
+Vite + React 19 + TypeScript, Tailwind v4, [Base UI](https://base-ui.com) (shadcn-style components, not Radix).
+
+## Running locally
+
+```bash
+npm install
+npm run dev
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+## Deploying your own
+
+Pushes to `master` auto-deploy to GitHub Pages via the included workflow (`.github/workflows/deploy.yml`). Fork it, update `base` in `vite.config.ts` to match your repo name, enable Pages (Settings → Pages → Source: GitHub Actions).
+
+## Built with Claude Code
+
+This project was built with heavy use of [Claude Code](https://claude.com/claude-code). Happy to talk through any of the implementation in issues/comments.
