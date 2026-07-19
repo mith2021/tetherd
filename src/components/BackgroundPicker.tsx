@@ -17,6 +17,7 @@ const MAX_VIDEO_FILE_MB = 100
 export function BackgroundPicker({ backgrounds, setBackgrounds, selectedId, onSelect, mediaUrls }: Props) {
   const fileRef = useRef<HTMLInputElement>(null)
   const [error, setError] = useState<string | null>(null)
+  const [uploading, setUploading] = useState(false)
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -34,13 +35,17 @@ export function BackgroundPicker({ backgrounds, setBackgrounds, selectedId, onSe
       return
     }
     setError(null)
-
-    const id = `custom-${Date.now()}`
-    await saveMedia(id, file)
-    const kind = isVideo ? 'video' : file.type === 'image/gif' ? 'gif' : 'custom'
-    const option: BackgroundOption = { id, name: file.name, kind, value: id }
-    setBackgrounds((prev) => [...prev, option])
-    onSelect(id)
+    setUploading(true)
+    try {
+      const id = `custom-${Date.now()}`
+      await saveMedia(id, file)
+      const kind = isVideo ? 'video' : file.type === 'image/gif' ? 'gif' : 'custom'
+      const option: BackgroundOption = { id, name: file.name, kind, value: id }
+      setBackgrounds((prev) => [...prev, option])
+      onSelect(id)
+    } finally {
+      setUploading(false)
+    }
   }
 
   async function handleRemove(id: string) {
@@ -89,6 +94,7 @@ export function BackgroundPicker({ backgrounds, setBackgrounds, selectedId, onSe
                   onClick={() => handleRemove(bg.id)}
                   className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-black/80 text-white text-xs opacity-0 group-hover:opacity-100 transition flex items-center justify-center"
                   title="Remove"
+                  aria-label={`Remove ${bg.name}`}
                 >
                   ×
                 </button>
@@ -98,9 +104,10 @@ export function BackgroundPicker({ backgrounds, setBackgrounds, selectedId, onSe
         })}
         <button
           onClick={() => fileRef.current?.click()}
-          className="aspect-video rounded-lg border-2 border-dashed border-white/20 hover:border-white/50 flex items-center justify-center text-white/50 hover:text-white/80 text-xs transition"
+          disabled={uploading}
+          className="aspect-video rounded-lg border-2 border-dashed border-white/20 hover:border-white/50 flex items-center justify-center text-white/50 hover:text-white/80 text-xs transition disabled:opacity-50 disabled:pointer-events-none"
         >
-          + Upload
+          {uploading ? 'Uploading…' : '+ Upload'}
         </button>
       </div>
       <input ref={fileRef} type="file" accept="image/*,video/*" className="hidden" onChange={handleUpload} />

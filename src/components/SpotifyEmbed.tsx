@@ -38,6 +38,7 @@ export function SpotifyEmbed({ buttonHidden = false }: { buttonHidden?: boolean 
           render={
             <button
               title="Spotify"
+              aria-label="Spotify"
               className={`glass-pill text-white hover:brightness-125 w-11 h-11 rounded-full items-center justify-center transition ${
                 buttonHidden ? 'hidden' : 'flex'
               } ${parsed ? 'ring-2 ring-[#1DB954]/60' : ''}`}
@@ -58,7 +59,10 @@ export function SpotifyEmbed({ buttonHidden = false }: { buttonHidden?: boolean 
             <div className="flex gap-2">
               <Input
                 value={draft}
-                onChange={(e) => setDraft(e.target.value)}
+                onChange={(e) => {
+                  setDraft(e.target.value)
+                  setError(null)
+                }}
                 onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
                 placeholder="https://open.spotify.com/playlist/..."
                 className="bg-white/5 border-white/10 text-white placeholder:text-white/40 text-xs"

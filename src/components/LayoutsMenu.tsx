@@ -65,6 +65,7 @@ export function LayoutsMenu({ savedLayouts, onSave, onApply, onDelete }: Props) 
                     onClick={() => onDelete(n)}
                     className="w-6 h-6 flex items-center justify-center rounded-full text-white/40 hover:text-white hover:bg-white/15 transition shrink-0"
                     title="Delete layout"
+                    aria-label={`Delete layout ${n}`}
                   >
                     ×
                   </button>

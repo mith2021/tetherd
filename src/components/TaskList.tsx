@@ -51,7 +51,7 @@ export function TaskList({ tasks, setTasks, activeTaskId, setActiveTaskId, onTas
           placeholder="What are you working on?"
           className="bg-white/5 border-white/10 text-white placeholder:text-white/40"
         />
-        <Button onClick={addTask} variant="secondary">
+        <Button onClick={addTask} variant="secondary" disabled={!title.trim()}>
           Add
         </Button>
       </div>
@@ -82,6 +82,8 @@ export function TaskList({ tasks, setTasks, activeTaskId, setActiveTaskId, onTas
                 e.stopPropagation()
                 removeTask(task.id)
               }}
+              title="Remove task"
+              aria-label="Remove task"
               className="w-6 h-6 flex items-center justify-center rounded-full text-white/50 hover:text-white hover:bg-white/15 text-base transition shrink-0"
             >
               ×

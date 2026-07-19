@@ -36,6 +36,7 @@ export function AmbientMixer({ buttonHidden = false }: { buttonHidden?: boolean 
           render={
             <button
               title="Music / ambient sound"
+              aria-label="Music / ambient sound"
               className={`glass-pill text-white hover:brightness-125 w-11 h-11 rounded-full items-center justify-center transition ${
                 buttonHidden ? 'hidden' : 'flex'
               } ${savedRef ? 'ring-2 ring-white/50' : ''}`}
@@ -57,7 +58,10 @@ export function AmbientMixer({ buttonHidden = false }: { buttonHidden?: boolean 
             <div className="flex gap-2">
               <Input
                 value={draft}
-                onChange={(e) => setDraft(e.target.value)}
+                onChange={(e) => {
+                  setDraft(e.target.value)
+                  setError(null)
+                }}
                 onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
                 placeholder="https://youtube.com/watch?v=..."
                 className="bg-white/5 border-white/10 text-white placeholder:text-white/40 text-xs"

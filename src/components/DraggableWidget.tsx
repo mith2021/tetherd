@@ -156,6 +156,7 @@ export function DraggableWidget({
         <button
           onClick={onToggleMinimize}
           title={`Minimize ${title}`}
+          aria-label={`Minimize ${title}`}
           className="absolute top-2 right-2 z-10 w-6 h-6 rounded-full bg-black/40 hover:bg-black/70 text-white/70 hover:text-white text-xs opacity-0 group-hover:opacity-100 transition flex items-center justify-center"
         >
           &minus;
