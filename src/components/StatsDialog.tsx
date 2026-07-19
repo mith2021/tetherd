@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import type { Stats, TimerSettings } from '../types'
+import type { SessionRecord, Stats, TimerSettings } from '../types'
 import { StatsWidget } from './StatsWidget'
 import {
   sessionsInRange,
@@ -35,6 +35,52 @@ function StatTile({ icon, label, value }: { icon: React.ReactNode; label: string
         <p className="text-sm text-white/60">{label}</p>
         <p className="text-2xl font-bold text-white tabular-nums">{value}</p>
       </div>
+    </div>
+  )
+}
+
+function formatHour(hour: number) {
+  const period = hour < 12 ? 'AM' : 'PM'
+  const h12 = hour % 12 === 0 ? 12 : hour % 12
+  return `${h12}:00 ${period}`
+}
+
+function ReviewSessionsList({ sessions }: { sessions: SessionRecord[] }) {
+  if (sessions.length === 0) {
+    return <p className="text-white/50 text-sm text-center py-8">No sessions logged yet.</p>
+  }
+
+  const byDate = new Map<string, SessionRecord[]>()
+  for (const s of sessions) {
+    if (!byDate.has(s.date)) byDate.set(s.date, [])
+    byDate.get(s.date)!.push(s)
+  }
+  const sortedDates = [...byDate.keys()].sort((a, b) => b.localeCompare(a))
+
+  return (
+    <div className="space-y-4 max-h-96 overflow-y-auto pr-1">
+      {sortedDates.map((date) => {
+        const daySessions = byDate.get(date)!.slice().sort((a, b) => b.startHour - a.startHour)
+        const dayTotal = daySessions.reduce((sum, s) => sum + s.durationSec, 0)
+        return (
+          <div key={date} className="space-y-2">
+            <div className="flex items-baseline justify-between">
+              <span className="text-sm font-semibold text-white">
+                {new Date(date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+              </span>
+              <span className="text-xs text-white/50">{formatDuration(dayTotal)} total</span>
+            </div>
+            <div className="glass rounded-xl divide-y divide-white/10">
+              {daySessions.map((s, i) => (
+                <div key={i} className="flex items-center justify-between px-3 py-2 text-sm">
+                  <span className="text-white/80">{formatHour(s.startHour)}</span>
+                  <span className="text-white/50 tabular-nums">{formatMinutes(s.durationSec)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )
+      })}
     </div>
   )
 }
@@ -206,7 +252,7 @@ export function StatsDialog({ stats, settings, accentColor, todayCount, trigger 
           </TabsContent>
 
           <TabsContent value="review" className="pt-4">
-            <p className="text-white/50 text-sm text-center py-8">Coming soon.</p>
+            <ReviewSessionsList sessions={stats.sessions} />
           </TabsContent>
         </Tabs>
       </DialogContent>
