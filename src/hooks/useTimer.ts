@@ -149,7 +149,7 @@ export function useTimer({ settings, onSessionComplete, setStats, requireConfirm
       setStats((prev) => ({
         ...prev,
         sessions: [
-          ...prev.sessions,
+          ...(prev.sessions ?? []),
           { date: todayKey(), startHour: start.getHours(), durationSec: settings.focusMin * 60 },
         ],
       }))

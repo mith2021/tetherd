@@ -452,10 +452,13 @@ function App() {
               setActiveTaskId={setActiveTaskId}
               onTaskCompleted={() => {
                 const key = new Date().toISOString().slice(0, 10)
-                setStats((prev) => ({
-                  ...prev,
-                  tasksCompletedByDay: { ...prev.tasksCompletedByDay, [key]: (prev.tasksCompletedByDay[key] ?? 0) + 1 },
-                }))
+                setStats((prev) => {
+                  const tasksCompletedByDay = prev.tasksCompletedByDay ?? {}
+                  return {
+                    ...prev,
+                    tasksCompletedByDay: { ...tasksCompletedByDay, [key]: (tasksCompletedByDay[key] ?? 0) + 1 },
+                  }
+                })
               }}
             />
           </div>
