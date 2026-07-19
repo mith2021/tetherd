@@ -23,3 +23,8 @@ dist-ssr
 *.sln
 *.sw?
 .gstack/
+
+# local-only docs, not part of the public repo
+CLAUDE.md
+HANDOFF.md
+LAUNCH.md
