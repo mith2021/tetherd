@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, Suspense, lazy } from 'react'
 import { createPortal } from 'react-dom'
+import { useRegisterSW } from 'virtual:pwa-register/react'
 import { useLocalStorage } from './hooks/useLocalStorage'
 import { useTimer } from './hooks/useTimer'
 import { useBackgroundMedia } from './hooks/useBackgroundMedia'
@@ -106,6 +107,10 @@ function App() {
     deleteLayout,
   } = useWidgetLayout(['timer', 'tasks'])
   const pip = usePictureInPicture()
+
+  // stale service-worker cache otherwise requires a manual hard-reload to pick up
+  // a new deploy — surface it instead so users aren't stuck on a fixed-but-invisible bug
+  const { needRefresh: [needRefresh], updateServiceWorker } = useRegisterSW()
 
   function handleSessionComplete(type: SessionType) {
     playAlertBeep()
@@ -491,6 +496,18 @@ function App() {
           onConfirm={timer.confirmPresence}
           onTimeout={timer.discardSession}
         />
+      )}
+
+      {needRefresh && (
+        <div className="fixed bottom-6 left-6 z-[60] glass-dark rounded-full pl-4 pr-2 py-2 flex items-center gap-3 text-sm text-white">
+          <span>Update available</span>
+          <button
+            onClick={() => updateServiceWorker(true)}
+            className="bg-white text-black rounded-full px-3 py-1 font-medium hover:brightness-90 transition"
+          >
+            Reload
+          </button>
+        </div>
       )}
     </div>
   )
