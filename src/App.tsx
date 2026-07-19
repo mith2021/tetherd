@@ -1,4 +1,4 @@
-import { useEffect, useMemo, Suspense, lazy } from 'react'
+import { useEffect, useMemo, useRef, Suspense, lazy } from 'react'
 import { createPortal } from 'react-dom'
 import { useLocalStorage } from './hooks/useLocalStorage'
 import { useTimer } from './hooks/useTimer'
@@ -131,16 +131,25 @@ function App() {
     if (timer.awaitingConfirm) notifySessionComplete()
   }, [timer.awaitingConfirm])
 
+  // presence detection auto-pauses the timer when the face is lost, which would
+  // otherwise flip `timer.running` false and tear the camera down before it can
+  // ever see the user come back — keep it active through an auto-pause it caused
+  const awaitingReturnRef = useRef(false)
+  useEffect(() => {
+    if (timer.running || timer.sessionType !== 'focus') awaitingReturnRef.current = false
+  }, [timer.running, timer.sessionType])
   const presence = usePresenceDetection({
     enabled: settings.webcamPresenceEnabled,
-    active: timer.running && timer.sessionType === 'focus',
+    active: (timer.running || awaitingReturnRef.current) && timer.sessionType === 'focus',
     awayGraceSeconds: settings.webcamAwaySeconds,
     onFaceLost: () => {
       playPauseSound()
+      awaitingReturnRef.current = true
       timer.pause()
     },
     onFacePresent: () => {
       playStartSound()
+      awaitingReturnRef.current = false
       timer.start()
     },
   })
