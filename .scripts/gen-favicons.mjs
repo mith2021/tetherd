@@ -12,11 +12,12 @@ const targets = [
   ["public/icon-512.png", 512],
 ];
 
-// source logo has ~8% empty margin baked in around the rounded-square card,
-// making the glyph read smaller than other apps' icons at the same taskbar size —
-// crop that margin off before resizing so the art fills the full icon canvas
+// source logo is a big dark rounded-square card with the glyph occupying only
+// the middle ~55% of the frame — cropping just the outer margin still leaves
+// the card border, so the glyph reads tiny next to other taskbar icons that
+// fill edge-to-edge. Crop in to the glyph's own bounding box instead.
 const meta = await sharp(src).metadata();
-const cropPct = 0.08;
+const cropPct = 0.22;
 const cropPx = Math.round(Math.min(meta.width, meta.height) * cropPct);
 const cropped = sharp(src).extract({
   left: cropPx,
