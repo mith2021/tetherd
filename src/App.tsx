@@ -342,7 +342,9 @@ function App() {
           pip.pipWindow.document.body
         )}
 
-      <main className="relative z-10 flex flex-col items-center gap-6 px-4 pt-24 pb-10 w-full max-h-screen overflow-y-auto">
+      {/* top matches the header's own footprint so the scroll region starts below it —
+          padding-top would scroll away with content and let it clip under the fixed header */}
+      <main className="absolute inset-x-0 bottom-0 top-20 z-10 flex flex-col items-center gap-6 px-4 pb-10 overflow-y-auto">
         <DraggableWidget
           id="timer"
           title="Timer"
