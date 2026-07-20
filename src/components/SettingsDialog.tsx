@@ -10,11 +10,14 @@ import { Slider } from '@/components/ui/slider'
 import { Switch } from '@/components/ui/switch'
 import { Separator } from '@/components/ui/separator'
 import { Button } from '@/components/ui/button'
+import { useMemo, useState } from 'react'
 import type { BackgroundOption, ThemeSettings, TimerSettings } from '../types'
 import { BackgroundPicker } from './BackgroundPicker'
 import { BackgroundPositionEditor } from './BackgroundPositionEditor'
 import { requestNotificationPermission } from '../lib/notify'
 import { TIMER_FONTS } from '../fonts'
+import { PRESET_BACKGROUNDS } from '../backgrounds'
+import { dominantColorFor } from '../lib/dominantColor'
 
 interface Props {
   settings: TimerSettings
@@ -27,6 +30,8 @@ interface Props {
   webcamCameraError: string | null
 }
 
+// short curated spread — Auto (samples the background) and the eyedropper cover
+// the rest of the color space, so this list only needs a handful of anchors
 const ACCENTS = [
   { name: 'Orange', color: '#f97316' },
   { name: 'Red', color: '#ef4444' },
@@ -34,12 +39,6 @@ const ACCENTS = [
   { name: 'Blue', color: '#3b82f6' },
   { name: 'Purple', color: '#a855f7' },
   { name: 'Pink', color: '#ec4899' },
-  { name: 'Yellow', color: '#eab308' },
-  { name: 'Catppuccin', color: '#f5c2e7' },
-  { name: 'Nord', color: '#88c0d0' },
-  { name: 'Tokyo Night', color: '#7aa2f7' },
-  { name: 'Gruvbox', color: '#fe8019' },
-  { name: 'Dracula', color: '#bd93f9' },
 ]
 
 function Row({ label, value, children }: { label: string; value?: string; children: React.ReactNode }) {
@@ -65,6 +64,31 @@ export function SettingsDialog({
   webcamCameraError,
 }: Props) {
   const selectedMediaUrl = mediaUrls[theme.backgroundId]
+  const [picking, setPicking] = useState(false)
+  const allBackgrounds = useMemo(() => [...PRESET_BACKGROUNDS, ...backgrounds], [backgrounds])
+  const activeBg = allBackgrounds.find((b) => b.id === theme.backgroundId) ?? PRESET_BACKGROUNDS[0]
+  const hasEyeDropper = typeof window !== 'undefined' && 'EyeDropper' in window
+
+  async function pickFromBackground() {
+    setPicking(true)
+    try {
+      const color = await dominantColorFor(activeBg, selectedMediaUrl)
+      if (color) setTheme((t) => ({ ...t, accentColor: color }))
+    } finally {
+      setPicking(false)
+    }
+  }
+
+  async function pickWithEyeDropper() {
+    try {
+      // EyeDropper isn't in TS lib.dom yet in this TS version — feature-detected above
+      const dropper = new (window as unknown as { EyeDropper: new () => { open(): Promise<{ sRGBHex: string }> } }).EyeDropper()
+      const result = await dropper.open()
+      setTheme((t) => ({ ...t, accentColor: result.sRGBHex }))
+    } catch {
+      // user cancelled — no-op
+    }
+  }
 
   return (
     <Dialog>
@@ -347,7 +371,32 @@ export function SettingsDialog({
 
             <div className="space-y-2">
               <span className="text-sm text-white/70">Accent color</span>
-              <div className="flex gap-2 flex-wrap">
+              <div className="flex gap-2 flex-wrap items-center">
+                <button
+                  onClick={pickFromBackground}
+                  disabled={picking}
+                  title="Pick from background"
+                  className="w-7 h-7 rounded-full border-2 border-white/30 flex items-center justify-center text-white/70 hover:text-white hover:border-white/60 transition disabled:opacity-50"
+                  style={{
+                    background: 'conic-gradient(from 0deg, #f97316, #eab308, #22c55e, #3b82f6, #a855f7, #ef4444, #f97316)',
+                  }}
+                >
+                  {picking && <span className="w-2.5 h-2.5 rounded-full bg-black/60 animate-pulse" />}
+                </button>
+                {hasEyeDropper && (
+                  <button
+                    onClick={pickWithEyeDropper}
+                    title="Eyedropper — pick any pixel on screen"
+                    className="w-7 h-7 rounded-full border-2 border-white/30 bg-white/10 flex items-center justify-center text-white/70 hover:text-white hover:border-white/60 transition"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="m2 22 1-4 9.5-9.5" />
+                      <path d="M13.5 8.5 17 5" />
+                      <path d="m17 5 2 2 2-2a3 3 0 0 0-4-4l-2 2 2 2Z" />
+                    </svg>
+                  </button>
+                )}
+                <div className="w-px h-5 bg-white/15 mx-0.5" />
                 {ACCENTS.map((a) => (
                   <button
                     key={a.name}
