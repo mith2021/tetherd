@@ -7,6 +7,8 @@ import { useBackgroundMedia } from './hooks/useBackgroundMedia'
 import { useWidgetLayout } from './hooks/useWidgetLayout'
 import { usePictureInPicture, isPiPSupported } from './hooks/usePictureInPicture'
 import { usePresenceDetection } from './hooks/usePresenceDetection'
+import { useMilestoneToast } from './hooks/useMilestoneToast'
+import { calculateStreaks } from './lib/statsCompute'
 import { TimerDisplay } from './components/TimerDisplay'
 import { TaskList } from './components/TaskList'
 import { DraggableWidget } from './components/DraggableWidget'
@@ -218,6 +220,9 @@ function App() {
   const activeTask = tasks.find((t) => t.id === activeTaskId)
   const todayKeyStr = new Date().toISOString().slice(0, 10)
   const todayCount = stats.sessions.filter((s) => s.date === todayKeyStr).length
+
+  const currentStreak = useMemo(() => calculateStreaks(stats.sessions).current, [stats.sessions])
+  const activeMilestone = useMilestoneToast(currentStreak)
 
   // reserve space below the ring for label/controls/session pills; clamp so it never overflows the widget
   const ringSize = sizes.timer ? Math.max(160, Math.min(sizes.timer.width - 80, sizes.timer.height - 180)) : 300
@@ -507,6 +512,12 @@ function App() {
           >
             Reload
           </button>
+        </div>
+      )}
+
+      {activeMilestone != null && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] glass-dark rounded-full px-5 py-2.5 text-sm text-white animate-in fade-in slide-in-from-bottom-2">
+          🔥 {activeMilestone}-day streak!
         </div>
       )}
     </div>

@@ -29,6 +29,16 @@ interface Props {
 
 const ACCENTS = ['#f97316', '#ef4444', '#22c55e', '#3b82f6', '#a855f7', '#ec4899', '#eab308']
 
+// signature accent from each rice-culture palette, not the full palette — Tetherd's
+// "color" surface is just accentColor, backgrounds are images/gifs, not swatches
+const RICE_PALETTES = [
+  { name: 'Catppuccin', color: '#f5c2e7' },
+  { name: 'Nord', color: '#88c0d0' },
+  { name: 'Tokyo Night', color: '#7aa2f7' },
+  { name: 'Gruvbox', color: '#fe8019' },
+  { name: 'Dracula', color: '#bd93f9' },
+]
+
 function Row({ label, value, children }: { label: string; value?: string; children: React.ReactNode }) {
   return (
     <div className="space-y-2">
@@ -343,6 +353,24 @@ export function SettingsDialog({
                     style={{
                       background: c,
                       borderColor: theme.accentColor === c ? 'white' : 'transparent',
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <span className="text-sm text-white/70">Rice palettes</span>
+              <div className="flex gap-2">
+                {RICE_PALETTES.map((p) => (
+                  <button
+                    key={p.name}
+                    onClick={() => setTheme((t) => ({ ...t, accentColor: p.color }))}
+                    title={p.name}
+                    className="w-7 h-7 rounded-full border-2 transition"
+                    style={{
+                      background: p.color,
+                      borderColor: theme.accentColor === p.color ? 'white' : 'transparent',
                     }}
                   />
                 ))}
