@@ -1,14 +1,13 @@
 import { useState } from 'react'
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import type { SessionRecord, Stats, TimerSettings } from '../types'
+import type { SessionRecord, Stats } from '../types'
 import { StatsWidget } from './StatsWidget'
 import {
   sessionsInRange,
   totalFocusedSeconds,
   bestSessionSeconds,
   hourlyBuckets,
-  focusScoreStars,
   calculateStreaks,
   formatDuration,
   formatMinutes,
@@ -16,9 +15,7 @@ import {
 
 interface Props {
   stats: Stats
-  settings: TimerSettings
   accentColor: string
-  todayCount: number
   trigger: React.ReactElement
 }
 
@@ -96,19 +93,7 @@ function ReviewSessionsList({ sessions }: { sessions: SessionRecord[] }) {
   )
 }
 
-function Stars({ count }: { count: number }) {
-  return (
-    <div className="flex gap-1 text-lg">
-      {Array.from({ length: 5 }, (_, i) => (
-        <span key={i} className={i < count ? 'text-white' : 'text-white/25'}>
-          {i < count ? '★' : '☆'}
-        </span>
-      ))}
-    </div>
-  )
-}
-
-export function StatsDialog({ stats, settings, accentColor, todayCount, trigger }: Props) {
+export function StatsDialog({ stats, accentColor, trigger }: Props) {
   const [range, setRange] = useState<Range>('today')
   const [selectedDate, setSelectedDate] = useState(() => new Date())
 
@@ -203,15 +188,6 @@ export function StatsDialog({ stats, settings, accentColor, todayCount, trigger 
                 value={`${streaks.current}d`}
                 title={`Longest streak: ${streaks.longest} day${streaks.longest === 1 ? '' : 's'}`}
               />
-              <div className="glass rounded-2xl p-4 space-y-3 col-span-2">
-                <div className="text-white/50">
-                  <TargetIcon />
-                </div>
-                <div>
-                  <p className="text-sm text-white/60">Focus Score</p>
-                  <Stars count={focusScoreStars(todayCount, settings.dailySessionGoal)} />
-                </div>
-              </div>
             </div>
 
             {range === 'today' ? (
@@ -304,15 +280,6 @@ function CheckIcon() {
   return (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <path d="M20 6L9 17l-5-5" />
-    </svg>
-  )
-}
-function TargetIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <circle cx="12" cy="12" r="9" />
-      <circle cx="12" cy="12" r="5" />
-      <circle cx="12" cy="12" r="1" />
     </svg>
   )
 }

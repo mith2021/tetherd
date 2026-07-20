@@ -70,11 +70,6 @@ export function calculateStreaks(sessions: SessionRecord[]) {
   return { current, longest: Math.max(longest, current) }
 }
 
-export function focusScoreStars(sessionsToday: number, goal: number) {
-  if (goal <= 0) return 0
-  return Math.min(5, Math.round((sessionsToday / goal) * 5))
-}
-
 export function formatDuration(totalSeconds: number) {
   const h = Math.floor(totalSeconds / 3600)
   const m = Math.floor((totalSeconds % 3600) / 60)

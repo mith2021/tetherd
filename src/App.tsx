@@ -50,7 +50,6 @@ const DEFAULT_SETTINGS: TimerSettings = {
   pauseOnTabAway: false,
   confirmPresenceOnComplete: false,
   presenceGraceSeconds: 120,
-  dailySessionGoal: 4,
   webcamPresenceEnabled: false,
   webcamAwaySeconds: 15,
 }
@@ -263,9 +262,7 @@ function App() {
           <Suspense fallback={null}>
             <StatsDialog
               stats={stats}
-              settings={settings}
               accentColor={theme.accentColor}
-              todayCount={todayCount}
               trigger={
                 <button className="glass-pill text-white text-base font-medium px-4 py-2 rounded-full hover:brightness-125 transition">
                   {todayCount} focus session{todayCount === 1 ? '' : 's'} today

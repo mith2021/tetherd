@@ -10,7 +10,6 @@ export interface TimerSettings {
   pauseOnTabAway: boolean
   confirmPresenceOnComplete: boolean
   presenceGraceSeconds: number
-  dailySessionGoal: number // target focus sessions/day, drives Focus Score stars
   webcamPresenceEnabled: boolean // opt-in on-device face detection, auto-pauses focus sessions
   webcamAwaySeconds: number // consecutive no-face seconds before auto-pause
 }

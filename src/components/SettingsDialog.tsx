@@ -170,16 +170,6 @@ export function SettingsDialog({
                 onValueChange={(v) => setSettings((s) => ({ ...s, longBreakInterval: v as number }))}
               />
             </Row>
-            <Row label="Daily session goal" value={`${settings.dailySessionGoal}`}>
-              <Slider
-                min={1}
-                max={12}
-                step={1}
-                value={settings.dailySessionGoal}
-                onValueChange={(v) => setSettings((s) => ({ ...s, dailySessionGoal: v as number }))}
-              />
-            </Row>
-
             <Separator className="bg-white/10" />
 
             <div className="flex items-center justify-between">
