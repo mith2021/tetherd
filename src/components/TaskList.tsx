@@ -10,9 +10,10 @@ interface Props {
   activeTaskId: string | null
   setActiveTaskId: (id: string | null) => void
   onTaskCompleted?: () => void
+  accentColor: string
 }
 
-export function TaskList({ tasks, setTasks, activeTaskId, setActiveTaskId, onTaskCompleted }: Props) {
+export function TaskList({ tasks, setTasks, activeTaskId, setActiveTaskId, onTaskCompleted, accentColor }: Props) {
   const [title, setTitle] = useState('')
 
   function addTask() {
@@ -61,15 +62,15 @@ export function TaskList({ tasks, setTasks, activeTaskId, setActiveTaskId, onTas
           <li
             key={task.id}
             onClick={() => setActiveTaskId(task.id)}
-            className={`flex items-center gap-2.5 px-3 py-2 rounded-lg cursor-pointer transition group ${
-              activeTaskId === task.id ? 'bg-white/15' : 'hover:bg-white/5'
-            }`}
+            className="flex items-center gap-2.5 px-3 py-2 rounded-lg cursor-pointer transition group hover:bg-white/5"
+            style={activeTaskId === task.id ? { background: `${accentColor}26`, borderLeft: `2px solid ${accentColor}` } : undefined}
           >
             <Checkbox
               checked={task.done}
               onCheckedChange={() => toggleDone(task.id)}
               onClick={(e) => e.stopPropagation()}
-              className="border-white/50 data-checked:border-white data-checked:bg-white data-checked:text-black bg-white/10"
+              className="border-white/50 bg-white/10 data-checked:border-transparent data-checked:text-black"
+              style={task.done ? { background: accentColor } : undefined}
             />
             <span className={`flex-1 text-sm ${task.done ? 'line-through text-white/40' : 'text-white/90'}`}>
               {task.title}

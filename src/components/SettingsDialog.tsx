@@ -27,11 +27,14 @@ interface Props {
   webcamCameraError: string | null
 }
 
-const ACCENTS = ['#f97316', '#ef4444', '#22c55e', '#3b82f6', '#a855f7', '#ec4899', '#eab308']
-
-// signature accent from each rice-culture palette, not the full palette — Tetherd's
-// "color" surface is just accentColor, backgrounds are images/gifs, not swatches
-const RICE_PALETTES = [
+const ACCENTS = [
+  { name: 'Orange', color: '#f97316' },
+  { name: 'Red', color: '#ef4444' },
+  { name: 'Green', color: '#22c55e' },
+  { name: 'Blue', color: '#3b82f6' },
+  { name: 'Purple', color: '#a855f7' },
+  { name: 'Pink', color: '#ec4899' },
+  { name: 'Yellow', color: '#eab308' },
   { name: 'Catppuccin', color: '#f5c2e7' },
   { name: 'Nord', color: '#88c0d0' },
   { name: 'Tokyo Night', color: '#7aa2f7' },
@@ -344,33 +347,16 @@ export function SettingsDialog({
 
             <div className="space-y-2">
               <span className="text-sm text-white/70">Accent color</span>
-              <div className="flex gap-2">
-                {ACCENTS.map((c) => (
+              <div className="flex gap-2 flex-wrap">
+                {ACCENTS.map((a) => (
                   <button
-                    key={c}
-                    onClick={() => setTheme((t) => ({ ...t, accentColor: c }))}
+                    key={a.name}
+                    onClick={() => setTheme((t) => ({ ...t, accentColor: a.color }))}
+                    title={a.name}
                     className="w-7 h-7 rounded-full border-2 transition"
                     style={{
-                      background: c,
-                      borderColor: theme.accentColor === c ? 'white' : 'transparent',
-                    }}
-                  />
-                ))}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <span className="text-sm text-white/70">Rice palettes</span>
-              <div className="flex gap-2">
-                {RICE_PALETTES.map((p) => (
-                  <button
-                    key={p.name}
-                    onClick={() => setTheme((t) => ({ ...t, accentColor: p.color }))}
-                    title={p.name}
-                    className="w-7 h-7 rounded-full border-2 transition"
-                    style={{
-                      background: p.color,
-                      borderColor: theme.accentColor === p.color ? 'white' : 'transparent',
+                      background: a.color,
+                      borderColor: theme.accentColor === a.color ? 'white' : 'transparent',
                     }}
                   />
                 ))}

@@ -426,10 +426,9 @@ function App() {
                   key={type}
                   onClick={() => timer.switchType(type)}
                   className={`text-xs px-3 py-1.5 rounded-full transition font-medium ${
-                    timer.sessionType === type
-                      ? 'bg-white text-black'
-                      : 'text-white/70 hover:text-white hover:bg-white/10'
+                    timer.sessionType === type ? 'text-black' : 'text-white/70 hover:text-white hover:bg-white/10'
                   }`}
+                  style={timer.sessionType === type ? { background: theme.accentColor } : undefined}
                 >
                   {type === 'focus' ? 'Focus' : type === 'shortBreak' ? 'Short Break' : 'Long Break'}
                 </button>
@@ -460,6 +459,7 @@ function App() {
               setTasks={setTasks}
               activeTaskId={activeTaskId}
               setActiveTaskId={setActiveTaskId}
+              accentColor={theme.accentColor}
               onTaskCompleted={() => {
                 const key = new Date().toISOString().slice(0, 10)
                 setStats((prev) => {
