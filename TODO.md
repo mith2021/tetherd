@@ -5,17 +5,6 @@
 Each item below has concrete scope + acceptance criteria so an unattended session
 (cloud routine) can act on it without guessing. Skip anything not this specific.
 
-- **Goal-setting feature (session-count based)**: add a daily and/or weekly
-  target for completed focus sessions (not raw minutes). Settings field in
-  TimerMenu.tsx or a new small settings row: "Daily goal: N sessions" (default
-  off/0 = disabled). Add a small progress indicator — reuse the existing
-  "N focus sessions today" chip in App.tsx, extend it to show "3/5 today" when
-  a goal is set, using `stats.sessions` filtered to today (see
-  `calculateStreaks`/`sessionsInRange` in statsCompute.ts for the date-filter
-  pattern already used elsewhere). No new dependencies, no separate "Focus
-  Score" metric (that was intentionally removed 2026-07-19 — don't reintroduce
-  it, this is goal-vs-actual count only).
-
 - **Per-widget background tint**: each DraggableWidget (timer, tasks, stats)
   gets an optional color override applied on top of the existing `.glass`
   effect — a subtle tint, not a full re-theme. Add a per-widget color field to
@@ -53,6 +42,12 @@ Each item below has concrete scope + acceptance criteria so an unattended sessio
 - Aria-labels backlog item was already fully addressed by an earlier
   commit (a0bed76) — audited all icon-only buttons in src/components/ and
   src/App.tsx, none were missing aria-label/title. Removed from backlog.
+- Daily goal (session-count based): `dailyGoalSessions` field in
+  TimerSettings (default 0/off), a "Daily goal" slider row in TimerMenu.tsx
+  (0-16 sessions, "Off" at 0), and the header's "N focus sessions today"
+  chip now shows "3/5 today" when a goal is set, highlighted in the accent
+  color once met. No weekly goal (daily only, per the "and/or" in the
+  original scope note — kept to the smaller of the two).
 
 ## Dropped (2026-07-21)
 - README / demo video improvements — not a priority right now
