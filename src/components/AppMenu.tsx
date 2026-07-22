@@ -181,17 +181,17 @@ export function AppMenu({ theme, setTheme, backgrounds, mediaUrls, widgetTints, 
 
         <Separator className="bg-white/10" />
 
-        <div className="space-y-3">
+        <div className="space-y-2">
           <span className="text-sm text-white/70">Widget tint</span>
-          {TINT_WIDGETS.map(({ id, label }) => (
-            <div key={id} className="space-y-1.5">
-              <span className="text-xs text-white/50">{label}</span>
-              <div className="flex gap-2 flex-wrap items-center">
+          <div className="flex gap-4">
+            {TINT_WIDGETS.map(({ id, label }) => (
+              <div key={id} className="flex items-center gap-1.5">
+                <span className="text-xs text-white/50">{label}</span>
                 <button
                   onClick={() => setWidgetTint(id, null)}
                   title="No tint"
                   aria-label={`No tint for ${label}`}
-                  className="w-7 h-7 rounded-full border-2 flex items-center justify-center text-white/50 text-xs bg-white/5 transition"
+                  className="w-6 h-6 rounded-full border-2 flex items-center justify-center text-white/50 text-[10px] bg-white/5 transition"
                   style={{ borderColor: !widgetTints[id] ? 'white' : 'transparent' }}
                 >
                   ✕
@@ -201,9 +201,9 @@ export function AppMenu({ theme, setTheme, backgrounds, mediaUrls, widgetTints, 
                     onClick={() => pickWithEyeDropperInto((hex) => setWidgetTint(id, hex))}
                     title="Eyedropper — pick any pixel on screen"
                     aria-label={`Eyedropper tint for ${label}`}
-                    className="w-7 h-7 rounded-full border-2 border-white/30 bg-white/10 flex items-center justify-center text-white/70 hover:text-white hover:border-white/60 transition"
+                    className="w-6 h-6 rounded-full border-2 border-white/30 bg-white/10 flex items-center justify-center text-white/70 hover:text-white hover:border-white/60 transition"
                   >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="m2 22 1-4 9.5-9.5" />
                       <path d="M13.5 8.5 17 5" />
                       <path d="m17 5 2 2 2-2a3 3 0 0 0-4-4l-2 2 2 2Z" />
@@ -216,11 +216,11 @@ export function AppMenu({ theme, setTheme, backgrounds, mediaUrls, widgetTints, 
                   onChange={(e) => setWidgetTint(id, e.target.value)}
                   title={`Choose ${label} tint`}
                   aria-label={`Choose ${label} tint`}
-                  className="w-7 h-7 rounded-full border-2 border-white/30 bg-transparent p-0 cursor-pointer [&::-webkit-color-swatch-wrapper]:p-0 [&::-webkit-color-swatch]:rounded-full [&::-webkit-color-swatch]:border-none"
+                  className="w-6 h-6 rounded-full border-2 border-white/30 bg-transparent p-0 cursor-pointer [&::-webkit-color-swatch-wrapper]:p-0 [&::-webkit-color-swatch]:rounded-full [&::-webkit-color-swatch]:border-none"
                 />
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
 
         <Separator className="bg-white/10" />
