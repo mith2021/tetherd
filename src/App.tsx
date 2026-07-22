@@ -128,11 +128,14 @@ function App() {
     }, 4000)
   }
 
+  const activeTask = tasks.find((t) => t.id === activeTaskId)
+
   const timer = useTimer({
     settings,
     onSessionComplete: handleSessionComplete,
     setStats,
     requireConfirmOnFocusComplete: settings.confirmPresenceOnComplete,
+    activeTaskTitle: activeTask?.title ?? null,
   })
 
   useEffect(() => {
@@ -218,7 +221,6 @@ function App() {
   const bgUrl = isCustomBg ? mediaUrls[activeBg.id] : undefined
   const isVideoBg = activeBg.kind === 'video'
 
-  const activeTask = tasks.find((t) => t.id === activeTaskId)
   const todayKeyStr = new Date().toISOString().slice(0, 10)
   const todayCount = stats.sessions.filter((s) => s.date === todayKeyStr).length
 

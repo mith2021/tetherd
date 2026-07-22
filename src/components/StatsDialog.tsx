@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Input } from '@/components/ui/input'
 import type { SessionRecord, Stats } from '../types'
 import { StatsWidget } from './StatsWidget'
 import {
@@ -53,13 +54,32 @@ function formatHour(hour: number) {
   return `${h12}:00 ${period}`
 }
 
-function ReviewSessionsList({ sessions }: { sessions: SessionRecord[] }) {
+function matchesFilter(session: SessionRecord, dateLabel: string, filter: string) {
+  if (!filter) return true
+  const f = filter.toLowerCase()
+  if (session.taskTitle?.toLowerCase().includes(f)) return true
+  if (session.date.toLowerCase().includes(f)) return true
+  return dateLabel.toLowerCase().includes(f)
+}
+
+function ReviewSessionsList({ sessions, filter }: { sessions: SessionRecord[]; filter: string }) {
   if (sessions.length === 0) {
     return <p className="text-white/50 text-sm text-center py-8">No sessions logged yet.</p>
   }
 
+  const filtered = sessions.filter((s) =>
+    matchesFilter(
+      s,
+      new Date(s.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }),
+      filter
+    )
+  )
+  if (filtered.length === 0) {
+    return <p className="text-white/50 text-sm text-center py-8">No sessions match "{filter}".</p>
+  }
+
   const byDate = new Map<string, SessionRecord[]>()
-  for (const s of sessions) {
+  for (const s of filtered) {
     if (!byDate.has(s.date)) byDate.set(s.date, [])
     byDate.get(s.date)!.push(s)
   }
@@ -80,8 +100,9 @@ function ReviewSessionsList({ sessions }: { sessions: SessionRecord[] }) {
             </div>
             <div className="glass rounded-xl divide-y divide-white/10">
               {daySessions.map((s, i) => (
-                <div key={i} className="flex items-center justify-between px-3 py-2 text-sm">
+                <div key={i} className="grid grid-cols-[auto_1fr_auto] items-center gap-2 px-3 py-2 text-sm">
                   <span className="text-white/80">{formatHour(s.startHour)}</span>
+                  <span className="text-white/50 text-xs truncate text-center">{s.taskTitle ?? ''}</span>
                   <span className="text-white/50 tabular-nums">{formatMinutes(s.durationSec)}</span>
                 </div>
               ))}
@@ -96,6 +117,7 @@ function ReviewSessionsList({ sessions }: { sessions: SessionRecord[] }) {
 export function StatsDialog({ stats, accentColor, trigger }: Props) {
   const [range, setRange] = useState<Range>('today')
   const [selectedDate, setSelectedDate] = useState(() => new Date())
+  const [reviewFilter, setReviewFilter] = useState('')
 
   const today = new Date()
   today.setHours(0, 0, 0, 0)
@@ -249,8 +271,15 @@ export function StatsDialog({ stats, accentColor, trigger }: Props) {
             )}
           </TabsContent>
 
-          <TabsContent value="review" className="pt-4">
-            <ReviewSessionsList sessions={stats.sessions} />
+          <TabsContent value="review" className="space-y-3 pt-4">
+            <Input
+              value={reviewFilter}
+              onChange={(e) => setReviewFilter(e.target.value)}
+              placeholder="Filter by task or date…"
+              aria-label="Filter sessions"
+              className="bg-white/5 border-white/10 text-white placeholder:text-white/40"
+            />
+            <ReviewSessionsList sessions={stats.sessions} filter={reviewFilter} />
           </TabsContent>
         </Tabs>
       </DialogContent>
