@@ -8,17 +8,18 @@ Each item below has concrete scope + acceptance criteria so an unattended sessio
 - **Review Sessions filtering**: Review Sessions tab (StatsDialog.tsx) is
   currently a flat list. Add a simple text filter/search box above the list
   that filters by task name or date substring, client-side, no new deps.
-
-- **Goal-setting feature (session-count based)**: add a daily and/or weekly
-  target for completed focus sessions (not raw minutes). Settings field in
-  TimerMenu.tsx or a new small settings row: "Daily goal: N sessions" (default
-  off/0 = disabled). Add a small progress indicator — reuse the existing
-  "N focus sessions today" chip in App.tsx, extend it to show "3/5 today" when
-  a goal is set, using `stats.sessions` filtered to today (see
-  `calculateStreaks`/`sessionsInRange` in statsCompute.ts for the date-filter
-  pattern already used elsewhere). No new dependencies, no separate "Focus
-  Score" metric (that was intentionally removed 2026-07-19 — don't reintroduce
-  it, this is goal-vs-actual count only).
+  Note (2026-07-22, skipped this pass): `SessionRecord` (types.ts) has no
+  task attribution at all right now — `useTimer.ts`'s `finishCompletion`
+  pushes `{date, startHour, durationSec}` with no link to `activeTaskId`.
+  Task-name filtering needs that wired through first (App.tsx already has
+  `activeTaskId`/`activeTask`, so it's a matter of threading the task title
+  into `useTimer`'s session-push, as an optional field so old records stay
+  valid). Skipped unattended because `useTimer.ts` is the same file flagged
+  in CLAUDE.md history for two prior session-logging bugs — touching it
+  deserves a session with more room to verify persistence edge cases, not a
+  quick add. Date-substring-only filtering would be a partial, oddly-scoped
+  version of the ask, so left for a future pass that also adds task
+  attribution.
 
 - **Per-widget background tint**: each DraggableWidget (timer, tasks, stats)
   gets an optional color override applied on top of the existing `.glass`
@@ -49,6 +50,11 @@ Each item below has concrete scope + acceptance criteria so an unattended sessio
 - Aria-labels backlog item was already fully addressed by an earlier
   commit (a0bed76) — audited all icon-only buttons in src/components/ and
   src/App.tsx, none were missing aria-label/title. Removed from backlog.
+- Goal-setting feature (session-count based): added `dailyGoalSessions` to
+  `TimerSettings` (default 0/off), a "Daily goal" slider (0-16) in
+  TimerMenu.tsx, and extended the header "N focus sessions today" chip in
+  App.tsx to show "3/5 today" once a goal is set. No new "Focus Score"
+  metric added, no weekly goal (day-only, per scope note in this item).
 
 ## Dropped (2026-07-21)
 - README / demo video improvements — not a priority right now
