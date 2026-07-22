@@ -45,9 +45,19 @@ await page.waitForTimeout(500)
 
 const bgThumbs = page.locator('button.aspect-video')
 const bgCount = await bgThumbs.count()
-for (let i = 0; i < Math.min(bgCount, 4); i++) {
+for (let i = 0; i < Math.min(bgCount, 2); i++) {
   await bgThumbs.nth(i).click()
   await page.waitForTimeout(700)
+}
+
+// upload a custom background image for the demo — local-only file, never committed
+const customBgPath = path.join(process.cwd(), 'docs/vinland saga.webp')
+if (fs.existsSync(customBgPath)) {
+  await page.setInputFiles('input[type="file"]', customBgPath)
+  await page.waitForTimeout(1000)
+  const newThumb = page.locator('button.aspect-video').last()
+  await newThumb.click()
+  await page.waitForTimeout(1500)
 }
 
 const fontButtons = page.locator('button[style*="font-family"]')
