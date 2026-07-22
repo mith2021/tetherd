@@ -1,13 +1,45 @@
 # TODO
 
+## Needs human input (2026-07-22)
+
+This scheduled routine has apparently been firing much more often than
+intended today — roughly hourly between 2026-07-22 03:41 and 09:28 UTC —
+and every run independently picked up the same backlog items, since none
+of the earlier runs had merged yet by the time the next one started. The
+result is **6 open PRs duplicating only 3 backlog items**:
+
+- "Review Sessions filtering" → PR #6
+- "Goal-setting feature (session-count based)" → PR #7, #8, #9, #10 (four
+  independent implementations of the same feature)
+- "Per-widget background tint" → PR #11
+
+This run (started ~10:19 UTC) found all three backlog items already
+covered by an open PR and stopped rather than opening a 4th+ duplicate for
+an already-claimed item — there was no unclaimed backlog work left to do.
+
+Recommended cleanup, needs a human:
+1. For "Goal-setting feature", review PRs #7, #8, #9, #10, merge whichever
+   implementation looks best (they differ slightly — e.g. slider max
+   value, whether the chip highlights on goal-met, field name
+   `dailyGoal` vs `dailyGoalSessions`), close the rest unmerged.
+2. Review and merge (or close) #6 and #11 on their own merits.
+3. Check whatever schedule/cron config triggers this routine — it should
+   likely run far less often (e.g. once a day), not ~hourly, both to stop
+   duplicate work and to avoid burning tokens on redundant runs.
+
 ## Backlog
 
 Each item below has concrete scope + acceptance criteria so an unattended session
 (cloud routine) can act on it without guessing. Skip anything not this specific.
 
+**All three items below already have open PRs as of 2026-07-22 ~10:19 UTC
+(see "Needs human input" above) — do not pick any of these up again until
+that's resolved (PR merged/closed or item genuinely reopened).**
+
 - **Review Sessions filtering**: Review Sessions tab (StatsDialog.tsx) is
   currently a flat list. Add a simple text filter/search box above the list
   that filters by task name or date substring, client-side, no new deps.
+  — open: PR #6.
 
 - **Goal-setting feature (session-count based)**: add a daily and/or weekly
   target for completed focus sessions (not raw minutes). Settings field in
@@ -19,6 +51,7 @@ Each item below has concrete scope + acceptance criteria so an unattended sessio
   pattern already used elsewhere). No new dependencies, no separate "Focus
   Score" metric (that was intentionally removed 2026-07-19 — don't reintroduce
   it, this is goal-vs-actual count only).
+  — open: PR #7, #8, #9, #10 (duplicates — pick one, close the rest).
 
 - **Per-widget background tint**: each DraggableWidget (timer, tasks, stats)
   gets an optional color override applied on top of the existing `.glass`
@@ -31,6 +64,7 @@ Each item below has concrete scope + acceptance criteria so an unattended sessio
   `theme.glassIntensity` — those stay global). Default: no tint (current
   behavior unchanged). Keep it per-element-toggle-friendly, matching the
   existing `showTasks`/`showSessionPills` pattern in spirit.
+  — open: PR #11.
 
 ## Needs human scoping before automated work (do not touch unattended)
 
