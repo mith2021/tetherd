@@ -63,20 +63,18 @@ export function useTimer({ settings, onSessionComplete, setStats, requireConfirm
 
   // persist enough state to survive a refresh: session type/count always, plus either
   // the live endTime (if running) or the paused secondsLeft — never both, so a reload
-  // never resumes a countdown from stale wall-clock math
-  useEffect(() => {
-    const state: PersistedTimerState = {
-      sessionType,
-      focusCount,
-      secondsLeft,
-      endTime: running ? endTimeRef.current : null,
-    }
+  // never resumes a countdown from stale wall-clock math.
+  // Called synchronously (not via useEffect) from every mutator below, with the new
+  // values passed explicitly — an effect keyed to state fires a tick late (after
+  // React commits) and can lose the write if a reload/close races it, which is what
+  // silently dropped 2 completed focus sessions before this fix.
+  function persistNow(state: PersistedTimerState) {
     try {
       localStorage.setItem(PERSIST_KEY, JSON.stringify(state))
     } catch {
       // storage full or unavailable — ignore
     }
-  }, [sessionType, focusCount, secondsLeft, running])
+  }
 
   // keep secondsLeft accurate even if tab was backgrounded (drift-proof via Date.now)
   const tick = useCallback(() => {
@@ -105,13 +103,23 @@ export function useTimer({ settings, onSessionComplete, setStats, requireConfirm
   // if duration settings change while idle, reset displayed duration for current session type.
   // Keyed to the duration numbers only — depending on `running` or the settings object identity
   // made pausing reset the countdown to full (settings is a fresh object every App render).
+  // Compares against the last-seen values (not a fire-once flag) so it only resets on an actual
+  // change — a fire-once ref breaks under StrictMode's dev double-invoke, which runs this effect's
+  // "first" pass twice and would still clobber a restored/quick-added secondsLeft on mount.
   const runningRef = useRef(running)
   runningRef.current = running
   const sessionTypeRef = useRef(sessionType)
   sessionTypeRef.current = sessionType
+  const lastDurations = useRef([settings.focusMin, settings.shortBreakMin, settings.longBreakMin])
   useEffect(() => {
+    const current: [number, number, number] = [settings.focusMin, settings.shortBreakMin, settings.longBreakMin]
+    const changed = current.some((v, i) => v !== lastDurations.current[i])
+    lastDurations.current = current
+    if (!changed) return
     if (!runningRef.current) {
-      setSecondsLeft(durationFor(sessionTypeRef.current, settings))
+      const secs = durationFor(sessionTypeRef.current, settings)
+      setSecondsLeft(secs)
+      persistNow({ sessionType: sessionTypeRef.current, focusCount, secondsLeft: secs, endTime: null })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settings.focusMin, settings.shortBreakMin, settings.longBreakMin])
@@ -131,13 +139,23 @@ export function useTimer({ settings, onSessionComplete, setStats, requireConfirm
       setFocusCount(nextCount)
       const isLongBreak = nextCount % settings.longBreakInterval === 0
       const next: SessionType = isLongBreak ? 'longBreak' : 'shortBreak'
+      const secs = durationFor(next, settings)
       setSessionType(next)
-      setSecondsLeft(durationFor(next, settings))
-      if (settings.autoStartBreaks) start(next, settings)
+      setSecondsLeft(secs)
+      if (settings.autoStartBreaks) {
+        start(next, settings)
+      } else {
+        persistNow({ sessionType: next, focusCount: nextCount, secondsLeft: secs, endTime: null })
+      }
     } else {
+      const secs = durationFor('focus', settings)
       setSessionType('focus')
-      setSecondsLeft(durationFor('focus', settings))
-      if (settings.autoStartFocus) start('focus', settings)
+      setSecondsLeft(secs)
+      if (settings.autoStartFocus) {
+        start('focus', settings)
+      } else {
+        persistNow({ sessionType: 'focus', focusCount, secondsLeft: secs, endTime: null })
+      }
     }
   }
 
@@ -163,22 +181,29 @@ export function useTimer({ settings, onSessionComplete, setStats, requireConfirm
     const secs = secondsLeft > 0 && (type ?? sessionType) === sessionType ? secondsLeft : durationFor(useType, useSettings)
     sessionStartRef.current = new Date()
     endTimeRef.current = Date.now() + secs * 1000
+    setSessionType(useType)
     setRunning(true)
+    persistNow({ sessionType: useType, focusCount, secondsLeft: secs, endTime: endTimeRef.current })
   }
 
   function pause() {
+    let secs = secondsLeft
     if (endTimeRef.current != null) {
       const remainingMs = endTimeRef.current - Date.now()
-      setSecondsLeft(Math.max(0, Math.ceil(remainingMs / 1000)))
+      secs = Math.max(0, Math.ceil(remainingMs / 1000))
+      setSecondsLeft(secs)
     }
     endTimeRef.current = null
     setRunning(false)
+    persistNow({ sessionType, focusCount, secondsLeft: secs, endTime: null })
   }
 
   function reset() {
+    const secs = durationFor(sessionType, settings)
     endTimeRef.current = null
     setRunning(false)
-    setSecondsLeft(durationFor(sessionType, settings))
+    setSecondsLeft(secs)
+    persistNow({ sessionType, focusCount, secondsLeft: secs, endTime: null })
   }
 
   // user-initiated skip: never counts as a completed session, no stat logged
@@ -188,12 +213,29 @@ export function useTimer({ settings, onSessionComplete, setStats, requireConfirm
     advance()
   }
 
+  // quick +N min: shifts the live endTime if running, else just bumps the paused display
+  function addMinutes(minutes: number) {
+    const deltaMs = minutes * 60 * 1000
+    if (running && endTimeRef.current != null) {
+      endTimeRef.current += deltaMs
+      const secs = Math.max(0, Math.ceil((endTimeRef.current - Date.now()) / 1000))
+      setSecondsLeft(secs)
+      persistNow({ sessionType, focusCount, secondsLeft: secs, endTime: endTimeRef.current })
+    } else {
+      const secs = Math.max(0, secondsLeft + minutes * 60)
+      setSecondsLeft(secs)
+      persistNow({ sessionType, focusCount, secondsLeft: secs, endTime: null })
+    }
+  }
+
   function switchType(type: SessionType) {
+    const secs = durationFor(type, settings)
     endTimeRef.current = null
     setRunning(false)
     setAwaitingConfirm(false)
     setSessionType(type)
-    setSecondsLeft(durationFor(type, settings))
+    setSecondsLeft(secs)
+    persistNow({ sessionType: type, focusCount, secondsLeft: secs, endTime: null })
   }
 
   // user confirmed they're present: log the session and advance normally
@@ -204,9 +246,11 @@ export function useTimer({ settings, onSessionComplete, setStats, requireConfirm
 
   // user never responded: discard the session, don't log it, reset to a fresh focus timer
   function discardSession() {
+    const secs = durationFor('focus', settings)
     setAwaitingConfirm(false)
     setSessionType('focus')
-    setSecondsLeft(durationFor('focus', settings))
+    setSecondsLeft(secs)
+    persistNow({ sessionType: 'focus', focusCount, secondsLeft: secs, endTime: null })
   }
 
   return {
@@ -220,6 +264,7 @@ export function useTimer({ settings, onSessionComplete, setStats, requireConfirm
     pause,
     reset,
     skip,
+    addMinutes,
     switchType,
     confirmPresence,
     discardSession,

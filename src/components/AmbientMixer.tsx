@@ -1,15 +1,45 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { Slider } from '@/components/ui/slider'
 import { parseYouTubeUrl, youtubeEmbedUrl, type YouTubeRef } from '../lib/youtube'
 import { useLocalStorage } from '../hooks/useLocalStorage'
+import { setAmbientTrackVolume, stopAllAmbientTracks, type AmbientTrackId } from '../lib/sounds'
+
+const NOISE_TRACKS: { id: AmbientTrackId; label: string; emoji: string }[] = [
+  { id: 'rain', label: 'Rain', emoji: '🌧️' },
+  { id: 'fire', label: 'Fire', emoji: '🔥' },
+  { id: 'brown', label: 'Brown noise', emoji: '🟤' },
+  { id: 'white', label: 'White noise', emoji: '⚪' },
+]
 
 export function AmbientMixer({ buttonHidden = false }: { buttonHidden?: boolean }) {
   const [savedRef, setSavedRef] = useLocalStorage<YouTubeRef | null>('pomo-ambient-youtube-ref', null)
   const [playerVisible, setPlayerVisible] = useLocalStorage<boolean>('pomo-ambient-player-visible', true)
   const [draft, setDraft] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [noiseVolumes, setNoiseVolumes] = useLocalStorage<Record<AmbientTrackId, number>>('pomo-ambient-noise-volumes', {
+    rain: 0,
+    fire: 0,
+    brown: 0,
+    white: 0,
+  })
+
+  // re-apply saved volumes to the WebAudio engine on mount (engine state doesn't persist across reload)
+  useEffect(() => {
+    for (const track of NOISE_TRACKS) {
+      const v = noiseVolumes[track.id] ?? 0
+      if (v > 0) setAmbientTrackVolume(track.id, v)
+    }
+    return () => stopAllAmbientTracks()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  function handleNoiseChange(id: AmbientTrackId, volume: number) {
+    setNoiseVolumes((prev) => ({ ...prev, [id]: volume }))
+    setAmbientTrackVolume(id, volume)
+  }
 
   function handleSubmit() {
     const ref = parseYouTubeUrl(draft)
@@ -50,7 +80,24 @@ export function AmbientMixer({ buttonHidden = false }: { buttonHidden?: boolean 
           }
         />
         <PopoverContent className="glass-dark text-white p-4 rounded-2xl shadow-2xl w-80">
-          <div className="space-y-2">
+          <div className="space-y-3">
+            <div className="space-y-2">
+              <span className="text-sm font-medium text-white/80">White noise</span>
+              {NOISE_TRACKS.map((track) => (
+                <div key={track.id} className="flex items-center gap-2">
+                  <span className="text-base w-5 shrink-0">{track.emoji}</span>
+                  <span className="text-xs text-white/60 w-20 shrink-0">{track.label}</span>
+                  <Slider
+                    min={0}
+                    max={100}
+                    step={5}
+                    value={(noiseVolumes[track.id] ?? 0) * 100}
+                    onValueChange={(v) => handleNoiseChange(track.id, (v as number) / 100)}
+                  />
+                </div>
+              ))}
+            </div>
+
             <span className="text-sm font-medium text-white/80">Music / ambient sound</span>
             <p className="text-xs text-white/40">
               Paste a YouTube video or playlist link. It keeps playing even when you close this menu.
