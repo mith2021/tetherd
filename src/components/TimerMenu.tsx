@@ -124,6 +124,18 @@ export function TimerMenu({ settings, setSettings, webcamCameraError }: Props) {
 
         <Separator className="bg-white/10" />
 
+        <Row label="Daily goal" value={settings.dailyGoalSessions === 0 ? 'Off' : `${settings.dailyGoalSessions} sessions`}>
+          <Slider
+            min={0}
+            max={16}
+            step={1}
+            value={settings.dailyGoalSessions}
+            onValueChange={(v) => setSettings((s) => ({ ...s, dailyGoalSessions: v as number }))}
+          />
+        </Row>
+
+        <Separator className="bg-white/10" />
+
         <div className="flex items-center justify-between">
           <span className="text-sm text-white/70">Auto-start breaks</span>
           <Switch
