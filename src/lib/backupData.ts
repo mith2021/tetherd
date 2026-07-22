@@ -45,6 +45,7 @@ const DEFAULTS: BackupPayload = {
     presenceGraceSeconds: 120,
     webcamPresenceEnabled: false,
     webcamAwaySeconds: 15,
+    dailyGoalSessions: 0,
   },
   theme: {
     backgroundId: 'default',
