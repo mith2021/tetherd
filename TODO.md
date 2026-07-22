@@ -5,20 +5,6 @@
 Each item below has concrete scope + acceptance criteria so an unattended session
 (cloud routine) can act on it without guessing. Skip anything not this specific.
 
-- **Aria-labels**: settings gear button and any other icon-only `<button>` in
-  src/components/ and src/App.tsx missing `aria-label` or `title`. Grep for
-  `<button` without a nearby `aria-label=` prop, add one describing the action
-  (e.g. "Open timer settings"). Small, mechanical, safe for unattended work.
-
-- **Export/import data**: add a button in AppMenu.tsx, "Export data" — downloads a
-  JSON file (e.g. `pomodoro-backup-<date>.json`) containing the current
-  `pomo-stats`, `pomo-tasks`, `pomo-settings`, `pomo-theme` localStorage values.
-  Add a matching "Import data" file-picker button that reads a previously
-  exported JSON and restores those keys (validate shape before writing, reject
-  malformed files with a clear error, never partially apply). No backend, no
-  new dependencies — plain `Blob`/`URL.createObjectURL` for download,
-  `FileReader` for import.
-
 - **Review Sessions filtering**: Review Sessions tab (StatsDialog.tsx) is
   currently a flat list. Add a simple text filter/search box above the list
   that filters by task name or date substring, client-side, no new deps.
@@ -54,6 +40,15 @@ Each item below has concrete scope + acceptance criteria so an unattended sessio
   currently no-backend/localStorage-only per CLAUDE.md). Needs its own
   scoping session: what backend, auth provider, how much state syncs. Do not
   implement any part of this unattended.
+
+## Done 2026-07-22
+- Export/import data: "Export data" / "Import data" buttons in AppMenu.tsx
+  (Backup section) download/restore `pomo-stats`, `pomo-tasks`,
+  `pomo-settings`, `pomo-theme` as JSON (src/lib/backupData.ts), with
+  shape validation so malformed imports never partially apply.
+- Aria-labels backlog item was already fully addressed by an earlier
+  commit (a0bed76) — audited all icon-only buttons in src/components/ and
+  src/App.tsx, none were missing aria-label/title. Removed from backlog.
 
 ## Dropped (2026-07-21)
 - README / demo video improvements — not a priority right now
