@@ -196,6 +196,8 @@ export function StatsDialog({ stats, accentColor, trigger }: Props) {
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => shiftDay(-1)}
+                      title="Previous day"
+                      aria-label="Previous day"
                       className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition"
                     >
                       ‹
@@ -206,6 +208,8 @@ export function StatsDialog({ stats, accentColor, trigger }: Props) {
                     <button
                       onClick={() => shiftDay(1)}
                       disabled={selectedDateKey >= toKey(today)}
+                      title="Next day"
+                      aria-label="Next day"
                       className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition disabled:opacity-30"
                     >
                       ›
