@@ -1,18 +1,35 @@
 import type { Stats, Task, ThemeSettings, TimerSettings } from '../types'
+import type { WidgetLayout, WidgetSizes, SavedLayout } from '../hooks/useWidgetLayout'
 
-const BACKUP_KEYS = ['pomo-stats', 'pomo-tasks', 'pomo-settings', 'pomo-theme'] as const
+const BACKUP_KEYS = [
+  'pomo-stats',
+  'pomo-tasks',
+  'pomo-settings',
+  'pomo-theme',
+  'pomo-widget-layout-v2',
+  'pomo-widget-sizes-v1',
+  'pomo-saved-layouts',
+  'pomo-widget-minimized-v1',
+] as const
 
 export interface BackupPayload {
   stats: Stats
   tasks: Task[]
   settings: TimerSettings
   theme: ThemeSettings
+  widgetLayout: WidgetLayout
+  widgetSizes: WidgetSizes
+  savedLayouts: Record<string, SavedLayout>
+  widgetMinimized: Record<string, boolean>
 }
 
 // Keys are only written to localStorage on the first state change (see useLocalStorage),
 // so a key can legitimately be absent even in an app that's been used — fall back to the
-// same defaults App.tsx uses rather than omitting the field, which would fail validation
-// on import.
+// same defaults App.tsx/useWidgetLayout.ts use rather than omitting the field, which would
+// fail validation on import. The widget-layout keys default to {} rather than App's
+// per-widget-id null map — useWidgetLayout treats a missing id as null/flow-layout anyway,
+// so an empty object round-trips to the same visual result without this file needing to
+// know the app's current widget id list.
 const DEFAULTS: BackupPayload = {
   stats: { sessions: [], tasksCompletedByDay: {} },
   tasks: [],
@@ -34,6 +51,10 @@ const DEFAULTS: BackupPayload = {
     accentColor: '#f97316',
     fontFamily: 'system-ui',
   } as ThemeSettings,
+  widgetLayout: {},
+  widgetSizes: {},
+  savedLayouts: {},
+  widgetMinimized: {},
 }
 
 export function exportBackup() {
@@ -49,6 +70,10 @@ export function exportBackup() {
       tasks: payload['pomo-tasks'] ?? DEFAULTS.tasks,
       settings: payload['pomo-settings'] ?? DEFAULTS.settings,
       theme: payload['pomo-theme'] ?? DEFAULTS.theme,
+      widgetLayout: payload['pomo-widget-layout-v2'] ?? DEFAULTS.widgetLayout,
+      widgetSizes: payload['pomo-widget-sizes-v1'] ?? DEFAULTS.widgetSizes,
+      savedLayouts: payload['pomo-saved-layouts'] ?? DEFAULTS.savedLayouts,
+      widgetMinimized: payload['pomo-widget-minimized-v1'] ?? DEFAULTS.widgetMinimized,
     },
     null,
     2,
@@ -111,6 +136,16 @@ function isTheme(v: unknown): v is ThemeSettings {
   )
 }
 
+// Widget layout/sizes/saved-layouts/minimized-state are all plain Record<string, ...>
+// keyed by widget id — the set of ids can change as the app evolves, so validation only
+// checks "is a plain object", not specific keys. A missing/malformed value here isn't
+// fatal to the rest of the import; it degrades to the default (flow layout) instead of
+// rejecting the whole backup, since layout is cosmetic and shouldn't block restoring
+// stats/tasks/settings/theme.
+function isPlainObject(v: unknown): v is Record<string, unknown> {
+  return !!v && typeof v === 'object' && !Array.isArray(v)
+}
+
 // Validates the full shape before writing anything, so a malformed file never
 // partially applies (e.g. valid tasks but corrupted stats).
 export function parseBackup(json: string): BackupPayload {
@@ -125,14 +160,26 @@ export function parseBackup(json: string): BackupPayload {
     throw new Error('That file is not a valid backup.')
   }
 
-  const { stats, tasks, settings, theme } = parsed as Record<string, unknown>
+  const { stats, tasks, settings, theme, widgetLayout, widgetSizes, savedLayouts, widgetMinimized } =
+    parsed as Record<string, unknown>
 
   if (!isStats(stats)) throw new Error('Backup is missing valid stats data.')
   if (!isTasks(tasks)) throw new Error('Backup is missing valid tasks data.')
   if (!isSettings(settings)) throw new Error('Backup is missing valid settings data.')
   if (!isTheme(theme)) throw new Error('Backup is missing valid theme data.')
 
-  return { stats, tasks, settings, theme }
+  return {
+    stats,
+    tasks,
+    settings,
+    theme,
+    widgetLayout: isPlainObject(widgetLayout) ? (widgetLayout as WidgetLayout) : DEFAULTS.widgetLayout,
+    widgetSizes: isPlainObject(widgetSizes) ? (widgetSizes as WidgetSizes) : DEFAULTS.widgetSizes,
+    savedLayouts: isPlainObject(savedLayouts) ? (savedLayouts as Record<string, SavedLayout>) : DEFAULTS.savedLayouts,
+    widgetMinimized: isPlainObject(widgetMinimized)
+      ? (widgetMinimized as Record<string, boolean>)
+      : DEFAULTS.widgetMinimized,
+  }
 }
 
 export function applyBackup(payload: BackupPayload) {
@@ -140,4 +187,8 @@ export function applyBackup(payload: BackupPayload) {
   localStorage.setItem('pomo-tasks', JSON.stringify(payload.tasks))
   localStorage.setItem('pomo-settings', JSON.stringify(payload.settings))
   localStorage.setItem('pomo-theme', JSON.stringify(payload.theme))
+  localStorage.setItem('pomo-widget-layout-v2', JSON.stringify(payload.widgetLayout))
+  localStorage.setItem('pomo-widget-sizes-v1', JSON.stringify(payload.widgetSizes))
+  localStorage.setItem('pomo-saved-layouts', JSON.stringify(payload.savedLayouts))
+  localStorage.setItem('pomo-widget-minimized-v1', JSON.stringify(payload.widgetMinimized))
 }
