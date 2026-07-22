@@ -5,17 +5,23 @@
 Each item below has concrete scope + acceptance criteria so an unattended session
 (cloud routine) can act on it without guessing. Skip anything not this specific.
 
-- **Per-widget background tint**: each DraggableWidget (timer, tasks, stats)
-  gets an optional color override applied on top of the existing `.glass`
-  effect — a subtle tint, not a full re-theme. Add a per-widget color field to
-  the relevant localStorage-backed state (likely alongside `useWidgetLayout.ts`
-  or a new small per-widget settings map), a color picker control (reuse the
-  accent-color swatch pattern from AppMenu.tsx), and apply it as a tinted
-  overlay on the widget's `.glass` background (e.g. a low-opacity colored
-  layer, not replacing the blur/alpha vars already driven by
-  `theme.glassIntensity` — those stay global). Default: no tint (current
-  behavior unchanged). Keep it per-element-toggle-friendly, matching the
-  existing `showTasks`/`showSessionPills` pattern in spirit.
+- **Backfill task attribution gap**: sessions logged before the Review
+  Sessions filtering change (2026-07-22) have no `taskTitle` on
+  SessionRecord, so sorting/filtering by task only works going forward.
+  Needs human decision: leave as a known limit, or find a way to backfill
+  (likely not possible — the data was never captured).
+- **Menu control audit**: too many settings use sliders where they shouldn't.
+  Audit TimerMenu.tsx (and other menus) against best practice: binary
+  on/off → toggle switch; small fixed enum (3-5 options) → segmented
+  control/radio; unbounded/large-range numeric → slider; precise numeric
+  (exact count/minutes) → number input/stepper. Replace mismatched controls.
+- **Custom presets**: extend the existing timer-preset system (25/5/15 etc,
+  and `useWidgetLayout.ts`'s saved layouts) so the user can save their own
+  custom preset, not just pick from the built-in set.
+- **Full customization export**: `backupData.ts` currently exports
+  stats/tasks/settings/theme only. Extend to cover everything customizable,
+  including widget tints (`pomo-widget-tints-v1`, currently NOT backed up
+  per the per-widget-tint PR's own note) and saved layouts/presets.
 
 ## Needs human scoping before automated work (do not touch unattended)
 
@@ -35,6 +41,18 @@ Each item below has concrete scope + acceptance criteria so an unattended sessio
   so it reflects whichever task was active when a session actually
   finishes, not a stale closure) — sessions logged before this change have
   no taskTitle and are unaffected, still filterable by date.
+- Per-widget background tint: "Widget tint" section in AppMenu.tsx lets you
+  pick an optional color overlay for the Timer and Tasks widgets (the two
+  DraggableWidgets that actually exist — the backlog note also mentioned a
+  "stats" widget, but there's no such draggable widget in the app, only the
+  Stats dialog, so the feature covers timer+tasks only). Stored in
+  `pomo-widget-tints-v1` alongside the other per-widget-id maps in
+  useWidgetLayout.ts. Applied via a `--widget-tint` CSS custom property that
+  `.glass` layers under its existing frosted gradient (defaults to
+  transparent, so `theme.glassIntensity`'s blur/alpha vars are untouched).
+  Not added to the export/import backup, matching the existing precedent
+  that not every localStorage key is backed up (e.g. `pomo-active-task`
+  isn't either).
 - Export/import data: "Export data" / "Import data" buttons in AppMenu.tsx
   (Backup section) download/restore `pomo-stats`, `pomo-tasks`,
   `pomo-settings`, `pomo-theme` as JSON (src/lib/backupData.ts), with
