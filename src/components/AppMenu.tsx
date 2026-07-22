@@ -23,17 +23,6 @@ const TINT_WIDGETS = [
   { id: 'tasks', label: 'Tasks' },
 ] as const
 
-// short curated spread — Auto (samples the background) and the eyedropper cover
-// the rest of the color space, so this list only needs a handful of anchors
-const ACCENTS = [
-  { name: 'Orange', color: '#f97316' },
-  { name: 'Red', color: '#ef4444' },
-  { name: 'Green', color: '#22c55e' },
-  { name: 'Blue', color: '#3b82f6' },
-  { name: 'Purple', color: '#a855f7' },
-  { name: 'Pink', color: '#ec4899' },
-]
-
 export function AppMenu({ theme, setTheme, backgrounds, mediaUrls, widgetTints, setWidgetTint }: Props) {
   const [picking, setPicking] = useState(false)
   const [importError, setImportError] = useState<string | null>(null)
@@ -53,12 +42,12 @@ export function AppMenu({ theme, setTheme, backgrounds, mediaUrls, widgetTints, 
     }
   }
 
-  async function pickWithEyeDropper() {
+  async function pickWithEyeDropperInto(apply: (hex: string) => void) {
     try {
       // EyeDropper isn't in TS lib.dom yet in this TS version — feature-detected above
       const dropper = new (window as unknown as { EyeDropper: new () => { open(): Promise<{ sRGBHex: string }> } }).EyeDropper()
       const result = await dropper.open()
-      setTheme((t) => ({ ...t, accentColor: result.sRGBHex }))
+      apply(result.sRGBHex)
     } catch {
       // user cancelled — no-op
     }
@@ -167,7 +156,7 @@ export function AppMenu({ theme, setTheme, backgrounds, mediaUrls, widgetTints, 
             </button>
             {hasEyeDropper && (
               <button
-                onClick={pickWithEyeDropper}
+                onClick={() => pickWithEyeDropperInto((hex) => setTheme((t) => ({ ...t, accentColor: hex })))}
                 title="Eyedropper — pick any pixel on screen"
                 className="w-7 h-7 rounded-full border-2 border-white/30 bg-white/10 flex items-center justify-center text-white/70 hover:text-white hover:border-white/60 transition"
               >
@@ -179,18 +168,14 @@ export function AppMenu({ theme, setTheme, backgrounds, mediaUrls, widgetTints, 
               </button>
             )}
             <div className="w-px h-5 bg-white/15 mx-0.5" />
-            {ACCENTS.map((a) => (
-              <button
-                key={a.name}
-                onClick={() => setTheme((t) => ({ ...t, accentColor: a.color }))}
-                title={a.name}
-                className="w-7 h-7 rounded-full border-2 transition"
-                style={{
-                  background: a.color,
-                  borderColor: theme.accentColor === a.color ? 'white' : 'transparent',
-                }}
-              />
-            ))}
+            <input
+              type="color"
+              value={theme.accentColor}
+              onChange={(e) => setTheme((t) => ({ ...t, accentColor: e.target.value }))}
+              title="Choose accent color"
+              aria-label="Choose accent color"
+              className="w-7 h-7 rounded-full border-2 border-white/30 bg-transparent p-0 cursor-pointer [&::-webkit-color-swatch-wrapper]:p-0 [&::-webkit-color-swatch]:rounded-full [&::-webkit-color-swatch]:border-none"
+            />
           </div>
         </div>
 
@@ -211,19 +196,28 @@ export function AppMenu({ theme, setTheme, backgrounds, mediaUrls, widgetTints, 
                 >
                   ✕
                 </button>
-                {ACCENTS.map((a) => (
+                {hasEyeDropper && (
                   <button
-                    key={a.name}
-                    onClick={() => setWidgetTint(id, a.color)}
-                    title={a.name}
-                    aria-label={`${a.name} tint for ${label}`}
-                    className="w-7 h-7 rounded-full border-2 transition"
-                    style={{
-                      background: a.color,
-                      borderColor: widgetTints[id] === a.color ? 'white' : 'transparent',
-                    }}
-                  />
-                ))}
+                    onClick={() => pickWithEyeDropperInto((hex) => setWidgetTint(id, hex))}
+                    title="Eyedropper — pick any pixel on screen"
+                    aria-label={`Eyedropper tint for ${label}`}
+                    className="w-7 h-7 rounded-full border-2 border-white/30 bg-white/10 flex items-center justify-center text-white/70 hover:text-white hover:border-white/60 transition"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="m2 22 1-4 9.5-9.5" />
+                      <path d="M13.5 8.5 17 5" />
+                      <path d="m17 5 2 2 2-2a3 3 0 0 0-4-4l-2 2 2 2Z" />
+                    </svg>
+                  </button>
+                )}
+                <input
+                  type="color"
+                  value={widgetTints[id] ?? '#f97316'}
+                  onChange={(e) => setWidgetTint(id, e.target.value)}
+                  title={`Choose ${label} tint`}
+                  aria-label={`Choose ${label} tint`}
+                  className="w-7 h-7 rounded-full border-2 border-white/30 bg-transparent p-0 cursor-pointer [&::-webkit-color-swatch-wrapper]:p-0 [&::-webkit-color-swatch]:rounded-full [&::-webkit-color-swatch]:border-none"
+                />
               </div>
             </div>
           ))}
