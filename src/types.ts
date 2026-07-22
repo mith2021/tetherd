@@ -12,6 +12,7 @@ export interface TimerSettings {
   presenceGraceSeconds: number
   webcamPresenceEnabled: boolean // opt-in on-device face detection, auto-pauses focus sessions
   webcamAwaySeconds: number // consecutive no-face seconds before auto-pause
+  dailyGoalSessions: number // target completed focus sessions per day, 0 = disabled
 }
 
 export interface Task {

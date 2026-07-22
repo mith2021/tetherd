@@ -9,17 +9,6 @@ Each item below has concrete scope + acceptance criteria so an unattended sessio
   currently a flat list. Add a simple text filter/search box above the list
   that filters by task name or date substring, client-side, no new deps.
 
-- **Goal-setting feature (session-count based)**: add a daily and/or weekly
-  target for completed focus sessions (not raw minutes). Settings field in
-  TimerMenu.tsx or a new small settings row: "Daily goal: N sessions" (default
-  off/0 = disabled). Add a small progress indicator — reuse the existing
-  "N focus sessions today" chip in App.tsx, extend it to show "3/5 today" when
-  a goal is set, using `stats.sessions` filtered to today (see
-  `calculateStreaks`/`sessionsInRange` in statsCompute.ts for the date-filter
-  pattern already used elsewhere). No new dependencies, no separate "Focus
-  Score" metric (that was intentionally removed 2026-07-19 — don't reintroduce
-  it, this is goal-vs-actual count only).
-
 - **Per-widget background tint**: each DraggableWidget (timer, tasks, stats)
   gets an optional color override applied on top of the existing `.glass`
   effect — a subtle tint, not a full re-theme. Add a per-widget color field to
@@ -42,6 +31,12 @@ Each item below has concrete scope + acceptance criteria so an unattended sessio
   implement any part of this unattended.
 
 ## Done 2026-07-22
+- Goal-setting feature (session-count based): added `dailyGoalSessions` to
+  TimerSettings (default 0/off), a "Daily goal" slider (0-12) in
+  TimerMenu.tsx, and extended the "N focus sessions today" header chip in
+  App.tsx to show "3/5 today" once a goal is set. Daily only, per the
+  backlog's concrete "Daily goal: N sessions" field name — did not add a
+  weekly variant since the item's acceptance criteria only spelled out daily.
 - Export/import data: "Export data" / "Import data" buttons in AppMenu.tsx
   (Backup section) download/restore `pomo-stats`, `pomo-tasks`,
   `pomo-settings`, `pomo-theme` as JSON (src/lib/backupData.ts), with
