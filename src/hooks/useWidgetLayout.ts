@@ -12,6 +12,7 @@ export interface WidgetSize {
 
 export type WidgetLayout = Record<string, WidgetPosition | null>
 export type WidgetSizes = Record<string, WidgetSize | null>
+export type WidgetTints = Record<string, string | null>
 
 export interface SavedLayout {
   layout: WidgetLayout
@@ -26,6 +27,7 @@ export function useWidgetLayout(ids: string[]) {
   const empty = Object.fromEntries(ids.map((id) => [id, null])) as WidgetLayout
   const emptySizes = Object.fromEntries(ids.map((id) => [id, null])) as WidgetSizes
   const emptyMinimized = Object.fromEntries(ids.map((id) => [id, false])) as Record<string, boolean>
+  const emptyTints = Object.fromEntries(ids.map((id) => [id, null])) as WidgetTints
   const [layout, setLayout] = useLocalStorage<WidgetLayout>('pomo-widget-layout-v2', empty)
   const [sizes, setSizes] = useLocalStorage<WidgetSizes>('pomo-widget-sizes-v1', emptySizes)
   const [savedLayouts, setSavedLayouts] = useLocalStorage<Record<string, SavedLayout>>('pomo-saved-layouts', {})
@@ -33,6 +35,12 @@ export function useWidgetLayout(ids: string[]) {
     'pomo-widget-minimized-v1',
     emptyMinimized
   )
+  // subtle per-widget color overlay on top of the shared .glass look — null = no tint (default)
+  const [tints, setTints] = useLocalStorage<WidgetTints>('pomo-widget-tints-v1', emptyTints)
+
+  function setTint(id: string, color: string | null) {
+    setTints((prev) => ({ ...prev, [id]: color }))
+  }
 
   function toggleMinimized(id: string) {
     setMinimizedState((prev) => ({ ...prev, [id]: !prev[id] }))
@@ -85,5 +93,7 @@ export function useWidgetLayout(ids: string[]) {
     saveLayoutAs,
     applyLayout,
     deleteLayout,
+    tints,
+    setTint,
   }
 }
