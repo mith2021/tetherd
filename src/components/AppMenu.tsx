@@ -2,11 +2,12 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Switch } from '@/components/ui/switch'
 import { Separator } from '@/components/ui/separator'
 import { Button } from '@/components/ui/button'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import type { BackgroundOption, ThemeSettings } from '../types'
 import { TIMER_FONTS } from '../fonts'
 import { PRESET_BACKGROUNDS } from '../backgrounds'
 import { dominantColorFor } from '../lib/dominantColor'
+import { applyBackup, exportBackup, parseBackup } from '../lib/backupData'
 
 interface Props {
   theme: ThemeSettings
@@ -28,6 +29,8 @@ const ACCENTS = [
 
 export function AppMenu({ theme, setTheme, backgrounds, mediaUrls }: Props) {
   const [picking, setPicking] = useState(false)
+  const [importError, setImportError] = useState<string | null>(null)
+  const importInputRef = useRef<HTMLInputElement>(null)
   const selectedMediaUrl = mediaUrls[theme.backgroundId]
   const allBackgrounds = [...PRESET_BACKGROUNDS, ...backgrounds]
   const activeBg = allBackgrounds.find((b) => b.id === theme.backgroundId) ?? PRESET_BACKGROUNDS[0]
@@ -51,6 +54,22 @@ export function AppMenu({ theme, setTheme, backgrounds, mediaUrls }: Props) {
       setTheme((t) => ({ ...t, accentColor: result.sRGBHex }))
     } catch {
       // user cancelled — no-op
+    }
+  }
+
+  async function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    try {
+      const text = await file.text()
+      const payload = parseBackup(text)
+      applyBackup(payload)
+      setImportError(null)
+      // reload so every hook re-hydrates from the newly written localStorage values
+      window.location.reload()
+    } catch (err) {
+      setImportError(err instanceof Error ? err.message : 'Could not import that file.')
     }
   }
 
@@ -166,6 +185,35 @@ export function AppMenu({ theme, setTheme, backgrounds, mediaUrls }: Props) {
               />
             ))}
           </div>
+        </div>
+
+        <Separator className="bg-white/10" />
+
+        <div className="space-y-2">
+          <span className="text-sm text-white/70">Backup</span>
+          <div className="flex gap-2">
+            <button
+              onClick={exportBackup}
+              className="flex-1 px-3 py-1.5 rounded-lg text-sm text-white/70 border border-white/15 hover:border-white/40 hover:text-white transition"
+            >
+              Export data
+            </button>
+            <button
+              onClick={() => importInputRef.current?.click()}
+              className="flex-1 px-3 py-1.5 rounded-lg text-sm text-white/70 border border-white/15 hover:border-white/40 hover:text-white transition"
+            >
+              Import data
+            </button>
+            <input
+              ref={importInputRef}
+              type="file"
+              accept="application/json"
+              className="hidden"
+              aria-label="Import data file"
+              onChange={handleImportFile}
+            />
+          </div>
+          {importError && <p className="text-xs text-red-400">{importError}</p>}
         </div>
       </PopoverContent>
     </Popover>
