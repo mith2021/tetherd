@@ -25,7 +25,9 @@ import type { BackgroundOption, SessionType, Stats, Task, ThemeSettings, TimerSe
 const AmbientMixer = lazy(() => import('./components/AmbientMixer').then((m) => ({ default: m.AmbientMixer })))
 const SpotifyEmbed = lazy(() => import('./components/SpotifyEmbed').then((m) => ({ default: m.SpotifyEmbed })))
 const StatsDialog = lazy(() => import('./components/StatsDialog').then((m) => ({ default: m.StatsDialog })))
-const SettingsDialog = lazy(() => import('./components/SettingsDialog').then((m) => ({ default: m.SettingsDialog })))
+const TimerMenu = lazy(() => import('./components/TimerMenu').then((m) => ({ default: m.TimerMenu })))
+const BackgroundMenu = lazy(() => import('./components/BackgroundMenu').then((m) => ({ default: m.BackgroundMenu })))
+const AppMenu = lazy(() => import('./components/AppMenu').then((m) => ({ default: m.AppMenu })))
 
 function DragHandle() {
   return (
@@ -304,16 +306,15 @@ function App() {
             </button>
           )}
           <Suspense fallback={null}>
-            <SettingsDialog
-              settings={settings}
-              setSettings={setSettings}
+            <TimerMenu settings={settings} setSettings={setSettings} webcamCameraError={presence.cameraError} />
+            <BackgroundMenu
               theme={theme}
               setTheme={setTheme}
               backgrounds={customBackgrounds}
               setBackgrounds={setCustomBackgrounds}
               mediaUrls={mediaUrls}
-              webcamCameraError={presence.cameraError}
             />
+            <AppMenu theme={theme} setTheme={setTheme} backgrounds={customBackgrounds} mediaUrls={mediaUrls} />
           </Suspense>
         </div>
       </header>
@@ -413,6 +414,18 @@ function App() {
               <Button onClick={timer.skip} size="lg" variant="ghost" className="text-white/70 hover:text-white hover:bg-white/10">
                 Skip
               </Button>
+            </div>
+
+            <div className="flex items-center gap-2 justify-center">
+              {[1, 5, 10].map((mins) => (
+                <button
+                  key={mins}
+                  onClick={() => timer.addMinutes(mins)}
+                  className="glass-pill text-xs text-white/70 hover:text-white px-3 py-1 rounded-full transition"
+                >
+                  +{mins}
+                </button>
+              ))}
             </div>
 
             <div
