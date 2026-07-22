@@ -9,6 +9,33 @@ export interface BackupPayload {
   theme: ThemeSettings
 }
 
+// Keys are only written to localStorage on the first state change (see useLocalStorage),
+// so a key can legitimately be absent even in an app that's been used — fall back to the
+// same defaults App.tsx uses rather than omitting the field, which would fail validation
+// on import.
+const DEFAULTS: BackupPayload = {
+  stats: { sessions: [], tasksCompletedByDay: {} },
+  tasks: [],
+  settings: {
+    focusMin: 25,
+    shortBreakMin: 5,
+    longBreakMin: 15,
+    longBreakInterval: 4,
+    autoStartBreaks: false,
+    autoStartFocus: false,
+    pauseOnTabAway: false,
+    confirmPresenceOnComplete: false,
+    presenceGraceSeconds: 120,
+    webcamPresenceEnabled: false,
+    webcamAwaySeconds: 15,
+  },
+  theme: {
+    backgroundId: 'default',
+    accentColor: '#f97316',
+    fontFamily: 'system-ui',
+  } as ThemeSettings,
+}
+
 export function exportBackup() {
   const payload: Partial<Record<(typeof BACKUP_KEYS)[number], unknown>> = {}
   for (const key of BACKUP_KEYS) {
@@ -18,10 +45,10 @@ export function exportBackup() {
 
   const json = JSON.stringify(
     {
-      stats: payload['pomo-stats'],
-      tasks: payload['pomo-tasks'],
-      settings: payload['pomo-settings'],
-      theme: payload['pomo-theme'],
+      stats: payload['pomo-stats'] ?? DEFAULTS.stats,
+      tasks: payload['pomo-tasks'] ?? DEFAULTS.tasks,
+      settings: payload['pomo-settings'] ?? DEFAULTS.settings,
+      theme: payload['pomo-theme'] ?? DEFAULTS.theme,
     },
     null,
     2,
