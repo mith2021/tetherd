@@ -32,9 +32,16 @@ interface UseTimerArgs {
   onSessionComplete: (type: SessionType) => void
   setStats: React.Dispatch<React.SetStateAction<Stats>>
   requireConfirmOnFocusComplete?: boolean
+  activeTaskTitle?: string | null
 }
 
-export function useTimer({ settings, onSessionComplete, setStats, requireConfirmOnFocusComplete }: UseTimerArgs) {
+export function useTimer({
+  settings,
+  onSessionComplete,
+  setStats,
+  requireConfirmOnFocusComplete,
+  activeTaskTitle,
+}: UseTimerArgs) {
   const initial = useRef(loadPersisted(settings)).current
   // a persisted endTime already in the past means the session finished while the tab
   // was closed/backgrounded — don't resume a live countdown, and flag it so a mount
@@ -110,6 +117,11 @@ export function useTimer({ settings, onSessionComplete, setStats, requireConfirm
   runningRef.current = running
   const sessionTypeRef = useRef(sessionType)
   sessionTypeRef.current = sessionType
+  // read via .current (not closed over) so a completion reached through the tick() rAF
+  // loop — whose closure is frozen from an earlier render — still sees the task that was
+  // active when the session actually finished, not whichever task was active on mount.
+  const activeTaskTitleRef = useRef(activeTaskTitle)
+  activeTaskTitleRef.current = activeTaskTitle
   const lastDurations = useRef([settings.focusMin, settings.shortBreakMin, settings.longBreakMin])
   useEffect(() => {
     const current: [number, number, number] = [settings.focusMin, settings.shortBreakMin, settings.longBreakMin]
@@ -168,7 +180,12 @@ export function useTimer({ settings, onSessionComplete, setStats, requireConfirm
         ...prev,
         sessions: [
           ...(prev.sessions ?? []),
-          { date: todayKey(), startHour: start.getHours(), durationSec: settings.focusMin * 60 },
+          {
+            date: todayKey(),
+            startHour: start.getHours(),
+            durationSec: settings.focusMin * 60,
+            ...(activeTaskTitleRef.current ? { taskTitle: activeTaskTitleRef.current } : {}),
+          },
         ],
       }))
     }
