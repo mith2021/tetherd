@@ -152,13 +152,17 @@ body {
 
 @layer components {
   /* --glass-blur (px) and --glass-alpha (multiplier) are set inline on the app root
-     from theme.glassIntensity so users can tune the glass look. Defaults match intensity 50. */
+     from theme.glassIntensity so users can tune the glass look. Defaults match intensity 50.
+     --widget-tint (optional, per-widget, set inline) layers a flat color on top of the
+     frosted gradient below — defaults to transparent so most widgets are unaffected. */
   .glass {
-    background: linear-gradient(
-      180deg,
-      rgba(255, 255, 255, calc(0.14 * var(--glass-alpha, 1))),
-      rgba(255, 255, 255, calc(0.05 * var(--glass-alpha, 1)))
-    );
+    background:
+      linear-gradient(var(--widget-tint, transparent), var(--widget-tint, transparent)),
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, calc(0.14 * var(--glass-alpha, 1))),
+        rgba(255, 255, 255, calc(0.05 * var(--glass-alpha, 1)))
+      );
     backdrop-filter: blur(var(--glass-blur, 20px)) saturate(160%);
     -webkit-backdrop-filter: blur(var(--glass-blur, 20px)) saturate(160%);
     border: 1px solid rgba(255, 255, 255, calc(0.18 * var(--glass-alpha, 1)));

@@ -20,6 +20,7 @@ import { PRESET_BACKGROUNDS } from './backgrounds'
 import { fontFamilyFor } from './fonts'
 import { playAlertBeep, playPauseSound, playResetSound, playStartSound } from './lib/sounds'
 import { notifySessionComplete } from './lib/notify'
+import { hexToRgba } from './lib/utils'
 import type { BackgroundOption, SessionType, Stats, Task, ThemeSettings, TimerSettings } from './types'
 
 const AmbientMixer = lazy(() => import('./components/AmbientMixer').then((m) => ({ default: m.AmbientMixer })))
@@ -109,6 +110,8 @@ function App() {
     saveLayoutAs,
     applyLayout,
     deleteLayout,
+    tints,
+    setTint,
   } = useWidgetLayout(['timer', 'tasks'])
   const pip = usePictureInPicture()
 
@@ -323,7 +326,14 @@ function App() {
               setBackgrounds={setCustomBackgrounds}
               mediaUrls={mediaUrls}
             />
-            <AppMenu theme={theme} setTheme={setTheme} backgrounds={customBackgrounds} mediaUrls={mediaUrls} />
+            <AppMenu
+              theme={theme}
+              setTheme={setTheme}
+              backgrounds={customBackgrounds}
+              mediaUrls={mediaUrls}
+              widgetTints={tints}
+              setWidgetTint={setTint}
+            />
           </Suspense>
         </div>
       </header>
@@ -368,6 +378,7 @@ function App() {
             className={`glass flex flex-col items-center gap-5 px-6 sm:px-8 py-5 rounded-3xl ${
               sizes.timer ? 'w-full h-full' : 'w-[92vw] max-w-[440px]'
             }`}
+            style={tints.timer ? ({ '--widget-tint': hexToRgba(tints.timer, 0.16) } as React.CSSProperties) : undefined}
           >
             <DragHandle />
             <p className={`text-white/70 text-sm ${activeTask ? '' : 'invisible'}`}>
@@ -473,6 +484,7 @@ function App() {
         >
           <div
             className={`glass rounded-2xl p-4 ${sizes.tasks ? 'w-full h-full' : 'w-[92vw] max-w-80'}`}
+            style={tints.tasks ? ({ '--widget-tint': hexToRgba(tints.tasks, 0.16) } as React.CSSProperties) : undefined}
           >
             <DragHandle />
             <TaskList

@@ -14,7 +14,14 @@ interface Props {
   setTheme: React.Dispatch<React.SetStateAction<ThemeSettings>>
   backgrounds: BackgroundOption[]
   mediaUrls: Record<string, string>
+  widgetTints: Record<string, string | null>
+  setWidgetTint: (id: string, color: string | null) => void
 }
+
+const TINT_WIDGETS = [
+  { id: 'timer', label: 'Timer' },
+  { id: 'tasks', label: 'Tasks' },
+] as const
 
 // short curated spread — Auto (samples the background) and the eyedropper cover
 // the rest of the color space, so this list only needs a handful of anchors
@@ -27,7 +34,7 @@ const ACCENTS = [
   { name: 'Pink', color: '#ec4899' },
 ]
 
-export function AppMenu({ theme, setTheme, backgrounds, mediaUrls }: Props) {
+export function AppMenu({ theme, setTheme, backgrounds, mediaUrls, widgetTints, setWidgetTint }: Props) {
   const [picking, setPicking] = useState(false)
   const [importError, setImportError] = useState<string | null>(null)
   const importInputRef = useRef<HTMLInputElement>(null)
@@ -185,6 +192,41 @@ export function AppMenu({ theme, setTheme, backgrounds, mediaUrls }: Props) {
               />
             ))}
           </div>
+        </div>
+
+        <Separator className="bg-white/10" />
+
+        <div className="space-y-3">
+          <span className="text-sm text-white/70">Widget tint</span>
+          {TINT_WIDGETS.map(({ id, label }) => (
+            <div key={id} className="space-y-1.5">
+              <span className="text-xs text-white/50">{label}</span>
+              <div className="flex gap-2 flex-wrap items-center">
+                <button
+                  onClick={() => setWidgetTint(id, null)}
+                  title="No tint"
+                  aria-label={`No tint for ${label}`}
+                  className="w-7 h-7 rounded-full border-2 flex items-center justify-center text-white/50 text-xs bg-white/5 transition"
+                  style={{ borderColor: !widgetTints[id] ? 'white' : 'transparent' }}
+                >
+                  ✕
+                </button>
+                {ACCENTS.map((a) => (
+                  <button
+                    key={a.name}
+                    onClick={() => setWidgetTint(id, a.color)}
+                    title={a.name}
+                    aria-label={`${a.name} tint for ${label}`}
+                    className="w-7 h-7 rounded-full border-2 transition"
+                    style={{
+                      background: a.color,
+                      borderColor: widgetTints[id] === a.color ? 'white' : 'transparent',
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
 
         <Separator className="bg-white/10" />
