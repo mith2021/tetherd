@@ -54,6 +54,7 @@ const DEFAULT_SETTINGS: TimerSettings = {
   presenceGraceSeconds: 120,
   webcamPresenceEnabled: false,
   webcamAwaySeconds: 15,
+  dailyGoalSessions: 0,
 }
 
 const DEFAULT_THEME: ThemeSettings = {
@@ -223,6 +224,7 @@ function App() {
 
   const todayKeyStr = new Date().toISOString().slice(0, 10)
   const todayCount = stats.sessions.filter((s) => s.date === todayKeyStr).length
+  const goalMet = settings.dailyGoalSessions > 0 && todayCount >= settings.dailyGoalSessions
 
   const currentStreak = useMemo(() => calculateStreaks(stats.sessions).current, [stats.sessions])
   const activeMilestone = useMilestoneToast(currentStreak)
@@ -268,8 +270,13 @@ function App() {
               stats={stats}
               accentColor={theme.accentColor}
               trigger={
-                <button className="glass-pill text-white text-base font-medium px-4 py-2 rounded-full hover:brightness-125 transition">
-                  {todayCount} focus session{todayCount === 1 ? '' : 's'} today
+                <button
+                  className="glass-pill text-white text-base font-medium px-4 py-2 rounded-full hover:brightness-125 transition"
+                  style={goalMet ? { color: theme.accentColor } : undefined}
+                >
+                  {settings.dailyGoalSessions > 0
+                    ? `${todayCount}/${settings.dailyGoalSessions} today`
+                    : `${todayCount} focus session${todayCount === 1 ? '' : 's'} today`}
                 </button>
               }
             />
