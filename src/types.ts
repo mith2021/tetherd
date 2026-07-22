@@ -47,6 +47,7 @@ export interface SessionRecord {
   date: string // YYYY-MM-DD, local
   startHour: number // 0-23, local hour the session started
   durationSec: number
+  taskTitle?: string // title of the active task when the session finished, if any
 }
 
 export interface Stats {

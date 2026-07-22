@@ -5,10 +5,6 @@
 Each item below has concrete scope + acceptance criteria so an unattended session
 (cloud routine) can act on it without guessing. Skip anything not this specific.
 
-- **Review Sessions filtering**: Review Sessions tab (StatsDialog.tsx) is
-  currently a flat list. Add a simple text filter/search box above the list
-  that filters by task name or date substring, client-side, no new deps.
-
 - **Goal-setting feature (session-count based)**: add a daily and/or weekly
   target for completed focus sessions (not raw minutes). Settings field in
   TimerMenu.tsx or a new small settings row: "Daily goal: N sessions" (default
@@ -42,6 +38,14 @@ Each item below has concrete scope + acceptance criteria so an unattended sessio
   implement any part of this unattended.
 
 ## Done 2026-07-22
+- Review Sessions filtering: added a text filter box above the Review
+  Sessions list (StatsDialog.tsx) that matches task name, raw date, or the
+  formatted date label (e.g. "Jul"), case-insensitive substring, client-side.
+  SessionRecord had no task association at all, so this also added an
+  optional `taskTitle` field to SessionRecord/useTimer (captured via a ref
+  so it reflects whichever task was active when a session actually
+  finishes, not a stale closure) — sessions logged before this change have
+  no taskTitle and are unaffected, still filterable by date.
 - Export/import data: "Export data" / "Import data" buttons in AppMenu.tsx
   (Backup section) download/restore `pomo-stats`, `pomo-tasks`,
   `pomo-settings`, `pomo-theme` as JSON (src/lib/backupData.ts), with
