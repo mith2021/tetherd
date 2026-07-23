@@ -42,6 +42,7 @@ export interface ThemeSettings {
   showSessionPills: boolean
   showStatsChip: boolean
   showMediaButtons: boolean // music + spotify + pip header buttons
+  showQuotes: boolean // motivational quote shown during focus sessions
 }
 
 export interface SessionRecord {
