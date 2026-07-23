@@ -10,6 +10,7 @@ const BACKUP_KEYS = [
   'pomo-widget-sizes-v1',
   'pomo-saved-layouts',
   'pomo-widget-minimized-v1',
+  'pomo-widget-tints-v1',
 ] as const
 
 export interface BackupPayload {
@@ -21,6 +22,7 @@ export interface BackupPayload {
   widgetSizes: WidgetSizes
   savedLayouts: Record<string, SavedLayout>
   widgetMinimized: Record<string, boolean>
+  widgetTints: Record<string, string | null>
 }
 
 // Keys are only written to localStorage on the first state change (see useLocalStorage),
@@ -56,6 +58,7 @@ const DEFAULTS: BackupPayload = {
   widgetSizes: {},
   savedLayouts: {},
   widgetMinimized: {},
+  widgetTints: {},
 }
 
 export function exportBackup() {
@@ -75,6 +78,7 @@ export function exportBackup() {
       widgetSizes: payload['pomo-widget-sizes-v1'] ?? DEFAULTS.widgetSizes,
       savedLayouts: payload['pomo-saved-layouts'] ?? DEFAULTS.savedLayouts,
       widgetMinimized: payload['pomo-widget-minimized-v1'] ?? DEFAULTS.widgetMinimized,
+      widgetTints: payload['pomo-widget-tints-v1'] ?? DEFAULTS.widgetTints,
     },
     null,
     2,
@@ -161,7 +165,7 @@ export function parseBackup(json: string): BackupPayload {
     throw new Error('That file is not a valid backup.')
   }
 
-  const { stats, tasks, settings, theme, widgetLayout, widgetSizes, savedLayouts, widgetMinimized } =
+  const { stats, tasks, settings, theme, widgetLayout, widgetSizes, savedLayouts, widgetMinimized, widgetTints } =
     parsed as Record<string, unknown>
 
   if (!isStats(stats)) throw new Error('Backup is missing valid stats data.')
@@ -180,6 +184,7 @@ export function parseBackup(json: string): BackupPayload {
     widgetMinimized: isPlainObject(widgetMinimized)
       ? (widgetMinimized as Record<string, boolean>)
       : DEFAULTS.widgetMinimized,
+    widgetTints: isPlainObject(widgetTints) ? (widgetTints as Record<string, string | null>) : DEFAULTS.widgetTints,
   }
 }
 
@@ -192,4 +197,5 @@ export function applyBackup(payload: BackupPayload) {
   localStorage.setItem('pomo-widget-sizes-v1', JSON.stringify(payload.widgetSizes))
   localStorage.setItem('pomo-saved-layouts', JSON.stringify(payload.savedLayouts))
   localStorage.setItem('pomo-widget-minimized-v1', JSON.stringify(payload.widgetMinimized))
+  localStorage.setItem('pomo-widget-tints-v1', JSON.stringify(payload.widgetTints))
 }
