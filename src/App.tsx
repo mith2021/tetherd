@@ -402,12 +402,12 @@ function App() {
             <DragHandle />
 
             {theme.showQuotes && timer.sessionType === 'focus' && (
-              <p className="absolute top-4 left-4 right-24 text-white/50 text-xs italic leading-relaxed pointer-events-none">
-                “{currentQuote.text}” <span className="not-italic text-white/35">— {currentQuote.author}</span>
+              <p className="absolute inset-x-6 top-1/2 -translate-y-1/2 z-0 text-white/10 text-sm italic text-center leading-relaxed pointer-events-none select-none">
+                “{currentQuote.text}” <span className="not-italic">— {currentQuote.author}</span>
               </p>
             )}
 
-            <p className={`text-white/70 text-sm ${activeTask ? '' : 'invisible'}`}>
+            <p className={`relative z-10 text-white/70 text-sm ${activeTask ? '' : 'invisible'}`}>
               Working on: {activeTask?.title ?? ' '}
             </p>
 

@@ -124,8 +124,8 @@ export function DraggableWidget({
     : { position: 'relative', zIndex: dragging || resizing ? 50 : 'auto' }
 
   if (size && !minimized) {
-    style.width = size.width
-    style.height = size.height
+    style.width = Math.max(minWidth, size.width)
+    style.height = Math.max(minHeight, size.height)
   }
 
   if (minimized) {
