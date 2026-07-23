@@ -281,7 +281,11 @@ function App() {
       )}
       <div className="absolute inset-0 bg-black" style={{ opacity: theme.overlayOpacity / 100 }} />
 
-      <header className="absolute top-0 left-0 right-0 flex items-center justify-between px-6 py-4 z-[60]">
+      <header
+        className={`absolute top-0 left-0 right-0 flex items-center justify-between px-6 py-4 z-[60] transition-opacity ${
+          timer.running ? 'opacity-0 pointer-events-none' : 'opacity-100'
+        }`}
+      >
         <div className={theme.showStatsChip ? '' : 'invisible'}>
           <Suspense fallback={null}>
             <StatsDialog
@@ -390,12 +394,19 @@ function App() {
           minHeight={420}
         >
           <div
-            className={`glass flex flex-col items-center gap-5 px-6 sm:px-8 py-5 rounded-3xl ${
+            className={`glass relative flex flex-col items-center gap-5 px-6 sm:px-8 py-5 rounded-3xl ${
               sizes.timer ? 'w-full h-full' : 'w-[92vw] max-w-[440px]'
             }`}
             style={tints.timer ? ({ '--widget-tint': hexToRgba(tints.timer, 0.16) } as React.CSSProperties) : undefined}
           >
             <DragHandle />
+
+            {theme.showQuotes && timer.sessionType === 'focus' && (
+              <p className="absolute top-4 left-4 right-24 text-white/50 text-xs italic leading-relaxed pointer-events-none">
+                “{currentQuote.text}” <span className="not-italic text-white/35">— {currentQuote.author}</span>
+              </p>
+            )}
+
             <p className={`text-white/70 text-sm ${activeTask ? '' : 'invisible'}`}>
               Working on: {activeTask?.title ?? ' '}
             </p>
@@ -408,12 +419,6 @@ function App() {
               size={ringSize}
               fontFamily={fontFamilyFor(theme.timerFont)}
             />
-
-            {theme.showQuotes && timer.sessionType === 'focus' && (
-              <p className="text-white/50 text-xs italic text-center max-w-[280px] leading-relaxed">
-                “{currentQuote.text}” <span className="not-italic text-white/35">— {currentQuote.author}</span>
-              </p>
-            )}
 
             <div className="flex items-center gap-3 flex-wrap justify-center">
               {!timer.running ? (
