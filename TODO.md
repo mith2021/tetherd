@@ -1,5 +1,44 @@
 # TODO
 
+## Auto-proposed and built (needs your review)
+
+### 2026-07-23: Motivational quotes during focus sessions
+- **Why**: You explicitly flagged that an earlier studyfoc.us research pass missed
+  this feature and asked for it to be prioritized first on the next gap-list run.
+- **Blocker hit this run**: this session's egress policy rejected direct connections
+  to `studyfoc.us` (`connect_rejected`, "policy denial" per the proxy status
+  endpoint), and third-party pages describing it (Chrome Web Store listing,
+  webcatalog.io, softwareontheweb.com, a dev.to writeup) all returned real 403s
+  (bot protection), not proxy blocks — so I could not re-verify the gap list
+  live against studyfoc.us this run. A generic web search corroborated ambient
+  sounds / stopwatch / task tracking / leaderboard / streaks as existing
+  studyfoc.us features but did not itself surface the quotes feature — that part
+  rests on your explicit confirmation, not fresh verification. Proceeding on the
+  2026-07-22 gap list as the source of truth for this run only; next run should
+  retry the live fetch.
+- **Scope**: confirmed `showQuotes`/quote content did not already exist anywhere
+  in `src/` before starting (grepped for "quote"/"Quote" — no hits). Adding:
+  - `src/quotes.ts` — a static list of short motivational/focus quotes (public-
+    domain-adjacent, widely-circulated attributed quotes — not scraped from
+    studyfoc.us, since it wasn't reachable this run).
+  - `showQuotes: boolean` on `ThemeSettings` (default `true`), toggle added to
+    AppMenu's existing "Show elements" switch list, same pattern as
+    `showTasks`/`showSessionPills`/`showStatsChip`/`showMediaButtons`.
+  - A quote line rendered in the Timer widget, visible only during `focus`
+    sessions (not breaks) when `showQuotes` is on. A new random quote is picked
+    each time a *new* focus session begins (transition into `sessionType ===
+    'focus'`), and stays fixed for the duration of that session (including
+    across pause/resume) rather than rotating mid-session — a judgment call;
+    studyfoc.us's actual rotation behavior couldn't be observed this run since
+    the site wasn't reachable, so this is my best guess at reasonable behavior,
+    not a verified port.
+  - **Judgment call to flag**: placement is directly below the timer ring, above
+    the Start/Pause/Reset button row — this is a guess at reasonable layout, not
+    a verified match to studyfoc.us's actual placement/styling.
+- **Out of scope for this pass**: quote source/library customization, per-quote
+  attribution styling beyond a plain em-dash, "favorite quote" or skip-to-next
+  controls — none of these were in the gap list's description of the feature.
+
 ## Backlog
 
 Each item below has concrete scope + acceptance criteria so an unattended session

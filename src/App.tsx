@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, Suspense, lazy } from 'react'
+import { useEffect, useMemo, useRef, useState, Suspense, lazy } from 'react'
 import { createPortal } from 'react-dom'
 import { useRegisterSW } from 'virtual:pwa-register/react'
 import { useLocalStorage } from './hooks/useLocalStorage'
@@ -21,6 +21,7 @@ import { fontFamilyFor } from './fonts'
 import { playAlertBeep, playPauseSound, playResetSound, playStartSound } from './lib/sounds'
 import { notifySessionComplete } from './lib/notify'
 import { hexToRgba } from './lib/utils'
+import { FOCUS_QUOTES } from './quotes'
 import type { BackgroundOption, SessionType, Stats, Task, ThemeSettings, TimerSettings } from './types'
 
 const AmbientMixer = lazy(() => import('./components/AmbientMixer').then((m) => ({ default: m.AmbientMixer })))
@@ -70,6 +71,7 @@ const DEFAULT_THEME: ThemeSettings = {
   showSessionPills: true,
   showStatsChip: true,
   showMediaButtons: true,
+  showQuotes: true,
 }
 
 function App() {
@@ -232,6 +234,19 @@ function App() {
   const currentStreak = useMemo(() => calculateStreaks(stats.sessions).current, [stats.sessions])
   const activeMilestone = useMilestoneToast(currentStreak)
 
+  // a new quote is picked each time a *new* focus session begins (transition into
+  // 'focus'), then holds steady for the rest of that session — including across
+  // pause/resume/reload — rather than rotating mid-session
+  const [quoteIndex, setQuoteIndex] = useState(() => Math.floor(Math.random() * FOCUS_QUOTES.length))
+  const prevSessionTypeRef = useRef(timer.sessionType)
+  useEffect(() => {
+    if (timer.sessionType === 'focus' && prevSessionTypeRef.current !== 'focus') {
+      setQuoteIndex(Math.floor(Math.random() * FOCUS_QUOTES.length))
+    }
+    prevSessionTypeRef.current = timer.sessionType
+  }, [timer.sessionType])
+  const currentQuote = FOCUS_QUOTES[quoteIndex]
+
   // reserve space below the ring for label/controls/session pills; clamp so it never overflows the widget
   const ringSize = sizes.timer ? Math.max(160, Math.min(sizes.timer.width - 80, sizes.timer.height - 180)) : 300
 
@@ -393,6 +408,12 @@ function App() {
               size={ringSize}
               fontFamily={fontFamilyFor(theme.timerFont)}
             />
+
+            {theme.showQuotes && timer.sessionType === 'focus' && (
+              <p className="text-white/50 text-xs italic text-center max-w-[280px] leading-relaxed">
+                “{currentQuote.text}” <span className="not-italic text-white/35">— {currentQuote.author}</span>
+              </p>
+            )}
 
             <div className="flex items-center gap-3 flex-wrap justify-center">
               {!timer.running ? (
