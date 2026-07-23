@@ -240,7 +240,7 @@ function App() {
   const [quoteIndex, setQuoteIndex] = useState(() => Math.floor(Math.random() * FOCUS_QUOTES.length))
   const prevSessionTypeRef = useRef(timer.sessionType)
   useEffect(() => {
-    if (timer.sessionType === 'focus' && prevSessionTypeRef.current !== 'focus') {
+    if (timer.sessionType === 'focus' && timer.running && prevSessionTypeRef.current !== 'focus') {
       setQuoteIndex(Math.floor(Math.random() * FOCUS_QUOTES.length))
     }
     prevSessionTypeRef.current = timer.sessionType
@@ -280,6 +280,12 @@ function App() {
         />
       )}
       <div className="absolute inset-0 bg-black" style={{ opacity: theme.overlayOpacity / 100 }} />
+
+      {theme.showQuotes && timer.sessionType === 'focus' && timer.running && (
+        <p className="fixed top-4 left-4 z-0 max-w-xs text-white/25 text-sm italic leading-relaxed pointer-events-none select-none">
+          “{currentQuote.text}” <span className="not-italic">— {currentQuote.author}</span>
+        </p>
+      )}
 
       <header
         className={`absolute top-0 left-0 right-0 flex items-center justify-between px-6 py-4 z-[60] transition-opacity ${
@@ -391,7 +397,7 @@ function App() {
           minimized={minimized.timer}
           onToggleMinimize={() => toggleMinimized('timer')}
           minWidth={340}
-          minHeight={420}
+          minHeight={520}
         >
           <div
             className={`glass relative flex flex-col items-center gap-5 px-6 sm:px-8 py-5 rounded-3xl ${
@@ -401,13 +407,7 @@ function App() {
           >
             <DragHandle />
 
-            {theme.showQuotes && timer.sessionType === 'focus' && (
-              <p className="absolute inset-x-6 top-1/2 -translate-y-1/2 z-0 text-white/10 text-sm italic text-center leading-relaxed pointer-events-none select-none">
-                “{currentQuote.text}” <span className="not-italic">— {currentQuote.author}</span>
-              </p>
-            )}
-
-            <p className={`relative z-10 text-white/70 text-sm ${activeTask ? '' : 'invisible'}`}>
+            <p className={`text-white/70 text-sm ${activeTask ? '' : 'invisible'}`}>
               Working on: {activeTask?.title ?? ' '}
             </p>
 
