@@ -129,6 +129,7 @@ export function AppMenu({ theme, setTheme, backgrounds, mediaUrls, widgetTints, 
               ['showSessionPills', 'Session type pills'],
               ['showStatsChip', 'Focus sessions counter'],
               ['showMediaButtons', 'Music / Spotify / pop-out buttons'],
+              ['showQuotes', 'Motivational quotes'],
             ] as const
           ).map(([key, label]) => (
             <div key={key} className="flex items-center justify-between">
