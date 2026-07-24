@@ -100,10 +100,6 @@ Each item below has concrete scope + acceptance criteria so an unattended sessio
 - **Custom presets**: extend the existing timer-preset system (25/5/15 etc,
   and `useWidgetLayout.ts`'s saved layouts) so the user can save their own
   custom preset, not just pick from the built-in set.
-- **Full customization export**: `backupData.ts` currently exports
-  stats/tasks/settings/theme only. Extend to cover everything customizable,
-  including widget tints (`pomo-widget-tints-v1`, currently NOT backed up
-  per the per-widget-tint PR's own note) and saved layouts/presets.
 
 ## Needs human scoping before automated work (do not touch unattended)
 
@@ -113,6 +109,14 @@ Each item below has concrete scope + acceptance criteria so an unattended sessio
   currently no-backend/localStorage-only per CLAUDE.md). Needs its own
   scoping session: what backend, auth provider, how much state syncs. Do not
   implement any part of this unattended.
+
+## Done 2026-07-24
+- Full customization export: turned out to already be resolved. `backupData.ts`
+  already covers `pomo-widget-layout-v2`/`pomo-widget-sizes-v1`/
+  `pomo-saved-layouts`/`pomo-widget-minimized-v1` (predates this backlog
+  entry), and the one genuinely missing piece (`pomo-widget-tints-v1`) was
+  added by #14 (2026-07-23). Verified by reading `backupData.ts`'s
+  `BACKUP_KEYS` directly rather than re-implementing. Removed from backlog.
 
 ## Done 2026-07-22
 - Review Sessions filtering: added a text filter box above the Review
