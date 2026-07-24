@@ -43,8 +43,8 @@ export function TaskList({ tasks, setTasks, activeTaskId, setActiveTaskId, onTas
   }
 
   return (
-    <div className="space-y-3">
-      <div className="flex gap-2">
+    <div className="flex flex-col gap-3 min-h-0 flex-1">
+      <div className="flex gap-2 shrink-0">
         <Input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
@@ -57,7 +57,7 @@ export function TaskList({ tasks, setTasks, activeTaskId, setActiveTaskId, onTas
         </Button>
       </div>
 
-      <ul className="space-y-1.5 max-h-64 overflow-y-auto">
+      <ul className="space-y-1.5 max-h-64 flex-1 min-h-0 overflow-y-auto">
         {tasks.map((task) => (
           <li
             key={task.id}

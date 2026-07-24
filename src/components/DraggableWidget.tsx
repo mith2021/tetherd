@@ -162,7 +162,7 @@ export function DraggableWidget({
           &minus;
         </button>
       )}
-      <div className="w-full h-full overflow-auto">{children}</div>
+      <div className="w-full h-full overflow-hidden">{children}</div>
       <div
         onPointerDown={handleResizePointerDown}
         className="absolute bottom-1 right-1 w-4 h-4 cursor-nwse-resize opacity-0 group-hover:opacity-60 hover:opacity-100! transition"
