@@ -5,8 +5,6 @@ import { Button } from '@/components/ui/button'
 import { useRef, useState } from 'react'
 import type { BackgroundOption, ThemeSettings } from '../types'
 import { TIMER_FONTS } from '../fonts'
-import { PRESET_BACKGROUNDS } from '../backgrounds'
-import { dominantColorFor } from '../lib/dominantColor'
 import { applyBackup, exportBackup, parseBackup } from '../lib/backupData'
 
 interface Props {
@@ -14,44 +12,11 @@ interface Props {
   setTheme: React.Dispatch<React.SetStateAction<ThemeSettings>>
   backgrounds: BackgroundOption[]
   mediaUrls: Record<string, string>
-  widgetTints: Record<string, string | null>
-  setWidgetTint: (id: string, color: string | null) => void
 }
 
-const TINT_WIDGETS = [
-  { id: 'timer', label: 'Timer' },
-  { id: 'tasks', label: 'Tasks' },
-] as const
-
-export function AppMenu({ theme, setTheme, backgrounds, mediaUrls, widgetTints, setWidgetTint }: Props) {
-  const [picking, setPicking] = useState(false)
+export function AppMenu({ theme, setTheme }: Props) {
   const [importError, setImportError] = useState<string | null>(null)
   const importInputRef = useRef<HTMLInputElement>(null)
-  const selectedMediaUrl = mediaUrls[theme.backgroundId]
-  const allBackgrounds = [...PRESET_BACKGROUNDS, ...backgrounds]
-  const activeBg = allBackgrounds.find((b) => b.id === theme.backgroundId) ?? PRESET_BACKGROUNDS[0]
-  const hasEyeDropper = typeof window !== 'undefined' && 'EyeDropper' in window
-
-  async function pickFromBackground() {
-    setPicking(true)
-    try {
-      const color = await dominantColorFor(activeBg, selectedMediaUrl)
-      if (color) setTheme((t) => ({ ...t, accentColor: color }))
-    } finally {
-      setPicking(false)
-    }
-  }
-
-  async function pickWithEyeDropperInto(apply: (hex: string) => void) {
-    try {
-      // EyeDropper isn't in TS lib.dom yet in this TS version — feature-detected above
-      const dropper = new (window as unknown as { EyeDropper: new () => { open(): Promise<{ sRGBHex: string }> } }).EyeDropper()
-      const result = await dropper.open()
-      apply(result.sRGBHex)
-    } catch {
-      // user cancelled — no-op
-    }
-  }
 
   async function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -130,7 +95,6 @@ export function AppMenu({ theme, setTheme, backgrounds, mediaUrls, widgetTints, 
               ['showStatsChip', 'Focus sessions counter'],
               ['showMediaButtons', 'Music / Spotify / pop-out buttons'],
               ['showQuotes', 'Motivational quotes'],
-              ['showTaskTags', 'Task subject tags'],
             ] as const
           ).map(([key, label]) => (
             <div key={key} className="flex items-center justify-between">
@@ -138,91 +102,6 @@ export function AppMenu({ theme, setTheme, backgrounds, mediaUrls, widgetTints, 
               <Switch checked={theme[key]} onCheckedChange={(v) => setTheme((t) => ({ ...t, [key]: v }))} />
             </div>
           ))}
-        </div>
-
-        <Separator className="bg-white/10" />
-
-        <div className="space-y-2">
-          <span className="text-sm text-white/70">Accent color</span>
-          <div className="flex gap-2 flex-wrap items-center">
-            <button
-              onClick={pickFromBackground}
-              disabled={picking}
-              title="Pick from background"
-              className="w-7 h-7 rounded-full border-2 border-white/30 flex items-center justify-center text-white/70 hover:text-white hover:border-white/60 transition disabled:opacity-50"
-              style={{
-                background: 'conic-gradient(from 0deg, #f97316, #eab308, #22c55e, #3b82f6, #a855f7, #ef4444, #f97316)',
-              }}
-            >
-              {picking && <span className="w-2.5 h-2.5 rounded-full bg-black/60 animate-pulse" />}
-            </button>
-            {hasEyeDropper && (
-              <button
-                onClick={() => pickWithEyeDropperInto((hex) => setTheme((t) => ({ ...t, accentColor: hex })))}
-                title="Eyedropper — pick any pixel on screen"
-                className="w-7 h-7 rounded-full border-2 border-white/30 bg-white/10 flex items-center justify-center text-white/70 hover:text-white hover:border-white/60 transition"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="m2 22 1-4 9.5-9.5" />
-                  <path d="M13.5 8.5 17 5" />
-                  <path d="m17 5 2 2 2-2a3 3 0 0 0-4-4l-2 2 2 2Z" />
-                </svg>
-              </button>
-            )}
-            <div className="w-px h-5 bg-white/15 mx-0.5" />
-            <input
-              type="color"
-              value={theme.accentColor}
-              onChange={(e) => setTheme((t) => ({ ...t, accentColor: e.target.value }))}
-              title="Choose accent color"
-              aria-label="Choose accent color"
-              className="w-7 h-7 rounded-full border-2 border-white/30 bg-transparent p-0 cursor-pointer [&::-webkit-color-swatch-wrapper]:p-0 [&::-webkit-color-swatch]:rounded-full [&::-webkit-color-swatch]:border-none"
-            />
-          </div>
-        </div>
-
-        <Separator className="bg-white/10" />
-
-        <div className="space-y-2">
-          <span className="text-sm text-white/70">Widget tint</span>
-          <div className="flex gap-4">
-            {TINT_WIDGETS.map(({ id, label }) => (
-              <div key={id} className="flex items-center gap-1.5">
-                <span className="text-xs text-white/50">{label}</span>
-                <button
-                  onClick={() => setWidgetTint(id, null)}
-                  title="No tint"
-                  aria-label={`No tint for ${label}`}
-                  className="w-6 h-6 rounded-full border-2 flex items-center justify-center text-white/50 text-[10px] bg-white/5 transition"
-                  style={{ borderColor: !widgetTints[id] ? 'white' : 'transparent' }}
-                >
-                  ✕
-                </button>
-                {hasEyeDropper && (
-                  <button
-                    onClick={() => pickWithEyeDropperInto((hex) => setWidgetTint(id, hex))}
-                    title="Eyedropper — pick any pixel on screen"
-                    aria-label={`Eyedropper tint for ${label}`}
-                    className="w-6 h-6 rounded-full border-2 border-white/30 bg-white/10 flex items-center justify-center text-white/70 hover:text-white hover:border-white/60 transition"
-                  >
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="m2 22 1-4 9.5-9.5" />
-                      <path d="M13.5 8.5 17 5" />
-                      <path d="m17 5 2 2 2-2a3 3 0 0 0-4-4l-2 2 2 2Z" />
-                    </svg>
-                  </button>
-                )}
-                <input
-                  type="color"
-                  value={widgetTints[id] ?? '#f97316'}
-                  onChange={(e) => setWidgetTint(id, e.target.value)}
-                  title={`Choose ${label} tint`}
-                  aria-label={`Choose ${label} tint`}
-                  className="w-6 h-6 rounded-full border-2 border-white/30 bg-transparent p-0 cursor-pointer [&::-webkit-color-swatch-wrapper]:p-0 [&::-webkit-color-swatch]:rounded-full [&::-webkit-color-swatch]:border-none"
-                />
-              </div>
-            ))}
-          </div>
         </div>
 
         <Separator className="bg-white/10" />
