@@ -77,8 +77,34 @@ const DEFAULT_THEME: ThemeSettings = {
 function App() {
   const [settingsRaw, setSettings] = useLocalStorage<TimerSettings>('pomo-settings', DEFAULT_SETTINGS)
   const settings: TimerSettings = { ...DEFAULT_SETTINGS, ...settingsRaw }
-  const [themeRaw, setTheme] = useLocalStorage<ThemeSettings>('pomo-theme', DEFAULT_THEME)
+  const [themeRaw, setThemeRaw] = useLocalStorage<ThemeSettings>('pomo-theme', DEFAULT_THEME)
   const theme: ThemeSettings = { ...DEFAULT_THEME, ...themeRaw }
+  const [themeByBackground, setThemeByBackground] = useLocalStorage<Record<string, ThemeSettings>>(
+    'pomo-theme-by-bg',
+    {}
+  )
+  // kept in sync every render so the switch handler below always reads the latest
+  // saved-snapshot map, never a stale render's closure (setThemeByBackground's own
+  // updater fires async/batched, so the write on a background switch can't be read
+  // back synchronously in the same call)
+  const themeByBackgroundRef = useRef(themeByBackground)
+  themeByBackgroundRef.current = themeByBackground
+  // visual settings (accent, glass, overlay, font, toggles) are remembered per background —
+  // switching away snapshots the outgoing (default-merged) theme under its backgroundId,
+  // switching to a background with a saved snapshot restores it, and a never-seen
+  // background just keeps whatever's currently on screen as its starting point
+  const setTheme: React.Dispatch<React.SetStateAction<ThemeSettings>> = (next) => {
+    setThemeRaw((prevRaw) => {
+      const prev: ThemeSettings = { ...DEFAULT_THEME, ...prevRaw }
+      const resolved = typeof next === 'function' ? (next as (p: ThemeSettings) => ThemeSettings)(prev) : next
+      if (resolved.backgroundId !== prev.backgroundId) {
+        const saved = themeByBackgroundRef.current[resolved.backgroundId]
+        setThemeByBackground((byBg) => ({ ...byBg, [prev.backgroundId]: prev }))
+        return saved ? { ...saved, backgroundId: resolved.backgroundId } : resolved
+      }
+      return resolved
+    })
+  }
   const [customBackgrounds, setCustomBackgrounds] = useLocalStorage<BackgroundOption[]>('pomo-custom-bgs', [])
   const [tasks, setTasks] = useLocalStorage<Task[]>('pomo-tasks', [])
   const [activeTaskId, setActiveTaskId] = useLocalStorage<string | null>('pomo-active-task', null)
