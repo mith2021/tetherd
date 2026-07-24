@@ -72,7 +72,6 @@ const DEFAULT_THEME: ThemeSettings = {
   showStatsChip: true,
   showMediaButtons: true,
   showQuotes: true,
-  showTaskTags: true,
 }
 
 function App() {
@@ -377,15 +376,10 @@ function App() {
               backgrounds={customBackgrounds}
               setBackgrounds={setCustomBackgrounds}
               mediaUrls={mediaUrls}
-            />
-            <AppMenu
-              theme={theme}
-              setTheme={setTheme}
-              backgrounds={customBackgrounds}
-              mediaUrls={mediaUrls}
               widgetTints={tints}
               setWidgetTint={setTint}
             />
+            <AppMenu theme={theme} setTheme={setTheme} backgrounds={customBackgrounds} mediaUrls={mediaUrls} />
           </Suspense>
         </div>
       </header>
@@ -546,7 +540,6 @@ function App() {
               activeTaskId={activeTaskId}
               setActiveTaskId={setActiveTaskId}
               accentColor={theme.accentColor}
-              showTags={theme.showTaskTags}
               onTaskCompleted={() => {
                 const key = new Date().toISOString().slice(0, 10)
                 setStats((prev) => {
