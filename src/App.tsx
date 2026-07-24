@@ -143,6 +143,17 @@ function App() {
   } = useWidgetLayout(['timer', 'tasks'])
   const pip = usePictureInPicture()
 
+  // minimizing a flow-layout widget shrinks main's scrollHeight, but the browser
+  // keeps the old scrollTop — leaving the view stuck mid-scroll showing a sliver
+  // of clipped content until the user manually scrolls. Clamp it back in bounds
+  // whenever a widget's minimized state changes.
+  const mainRef = useRef<HTMLElement>(null)
+  useEffect(() => {
+    const el = mainRef.current
+    if (!el) return
+    el.scrollTop = Math.min(el.scrollTop, el.scrollHeight - el.clientHeight)
+  }, [minimized.timer, minimized.tasks])
+
   // stale service-worker cache otherwise requires a manual hard-reload to pick up
   // a new deploy — surface it instead so users aren't stuck on a fixed-but-invisible bug
   const { needRefresh: [needRefresh], updateServiceWorker } = useRegisterSW()
@@ -308,7 +319,7 @@ function App() {
       <div className="absolute inset-0 bg-black" style={{ opacity: theme.overlayOpacity / 100 }} />
 
       {theme.showQuotes && timer.sessionType === 'focus' && timer.running && (
-        <p className="fixed top-4 left-4 z-0 max-w-xs text-white/25 text-sm italic leading-relaxed pointer-events-none select-none">
+        <p className="fixed top-4 left-4 z-0 max-w-sm text-white/45 text-lg italic leading-relaxed pointer-events-none select-none">
           “{currentQuote.text}” <span className="not-italic">— {currentQuote.author}</span>
         </p>
       )}
@@ -407,7 +418,10 @@ function App() {
 
       {/* top matches the header's own footprint so the scroll region starts below it —
           padding-top would scroll away with content and let it clip under the fixed header */}
-      <main className="absolute inset-x-0 bottom-0 top-20 z-10 flex flex-col items-center gap-6 px-4 pb-10 overflow-y-auto">
+      <main
+        ref={mainRef}
+        className="absolute inset-x-0 bottom-0 top-20 z-10 flex flex-col items-center gap-6 px-4 pb-10 overflow-y-auto"
+      >
         <DraggableWidget
           id="timer"
           title="Timer"
