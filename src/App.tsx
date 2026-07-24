@@ -72,6 +72,7 @@ const DEFAULT_THEME: ThemeSettings = {
   showStatsChip: true,
   showMediaButtons: true,
   showQuotes: true,
+  showTaskTags: true,
 }
 
 function App() {
@@ -519,6 +520,7 @@ function App() {
               activeTaskId={activeTaskId}
               setActiveTaskId={setActiveTaskId}
               accentColor={theme.accentColor}
+              showTags={theme.showTaskTags}
               onTaskCompleted={() => {
                 const key = new Date().toISOString().slice(0, 10)
                 setStats((prev) => {
