@@ -107,6 +107,19 @@ export function useTimer({
     }
   }, [running, tick])
 
+  // rAF is throttled/frozen by browsers while the tab is backgrounded, so a session
+  // that finishes off-screen never calls handleComplete until something else ticks it —
+  // if the user then switches back without ever refocusing enough to fire a fresh rAF
+  // frame first, the session silently goes unrecorded. Force a wall-clock check on
+  // every tab-foreground so a finished-while-hidden session is caught immediately.
+  useEffect(() => {
+    function handleVisibility() {
+      if (!document.hidden) tick()
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => document.removeEventListener('visibilitychange', handleVisibility)
+  }, [tick])
+
   // if duration settings change while idle, reset displayed duration for current session type.
   // Keyed to the duration numbers only — depending on `running` or the settings object identity
   // made pausing reset the countdown to full (settings is a fresh object every App render).
@@ -223,8 +236,28 @@ export function useTimer({
     persistNow({ sessionType, focusCount, secondsLeft: secs, endTime: null })
   }
 
-  // user-initiated skip: never counts as a completed session, no stat logged
+  // user-initiated skip: logs whatever focus time actually elapsed (not the full
+  // duration) before advancing — previously dropped that partial time entirely
   function skip() {
+    if (sessionType === 'focus') {
+      const totalSecs = durationFor('focus', settings)
+      const elapsedSecs = totalSecs - secondsLeft
+      if (elapsedSecs > 0) {
+        const start = sessionStartRef.current
+        setStats((prev) => ({
+          ...prev,
+          sessions: [
+            ...(prev.sessions ?? []),
+            {
+              date: todayKey(),
+              startHour: start.getHours(),
+              durationSec: elapsedSecs,
+              ...(activeTaskTitleRef.current ? { taskTitle: activeTaskTitleRef.current } : {}),
+            },
+          ],
+        }))
+      }
+    }
     endTimeRef.current = null
     setRunning(false)
     advance()
