@@ -21,6 +21,7 @@ export interface Task {
   targetPomodoros: number
   completedPomodoros: number
   done: boolean
+  project?: string // optional free-text subject/project tag
 }
 
 export interface BackgroundOption {
@@ -43,6 +44,7 @@ export interface ThemeSettings {
   showStatsChip: boolean
   showMediaButtons: boolean // music + spotify + pip header buttons
   showQuotes: boolean // motivational quote shown during focus sessions
+  showTaskTags: boolean // subject/project tag badge on tasks
 }
 
 export interface SessionRecord {
