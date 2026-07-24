@@ -544,7 +544,9 @@ function App() {
           minHeight={200}
         >
           <div
-            className={`glass rounded-2xl p-4 ${sizes.tasks ? 'w-full h-full' : 'w-[92vw] max-w-80'}`}
+            className={`glass rounded-2xl p-4 overflow-hidden flex flex-col ${
+              sizes.tasks ? 'w-full h-full' : 'w-[92vw] max-w-80'
+            }`}
             style={tints.tasks ? ({ '--widget-tint': hexToRgba(tints.tasks, 0.16) } as React.CSSProperties) : undefined}
           >
             <DragHandle />
