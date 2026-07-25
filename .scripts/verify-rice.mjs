@@ -1,16 +1,18 @@
 import { chromium } from 'playwright'
+import { chromiumLaunchOptions } from './lib/launch.mjs'
 
-const browser = await chromium.launch()
+const browser = await chromium.launch(chromiumLaunchOptions())
 const page = await browser.newPage({ viewport: { width: 1280, height: 800 } })
 const errors = []
 page.on('pageerror', e => errors.push(String(e)))
 await page.goto('http://localhost:5173', { waitUntil: 'networkidle' })
 await page.waitForTimeout(500)
 
-// open settings -> appearance
+// open App settings popover (font + "show elements" toggles live here now that
+// settings are split across separate Timer/Background/App header menus instead
+// of a single tabbed dialog)
 const buttons = await page.$$('header button')
 await buttons[buttons.length - 1].click()
-await page.click('button:has-text("Appearance")')
 await page.waitForTimeout(400)
 await page.screenshot({ path: process.argv[2] + '/rice-1-appearance.png' })
 
