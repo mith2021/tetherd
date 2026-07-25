@@ -62,9 +62,10 @@ scripts above.
    - Stop condition: `tsc --noEmit` clean + diff read (lockfile-only,
      no meaningful browser behavior to verify per the routine's own
      exception for dependency-only changes).
-   - **PR**: [#22](https://github.com/mith2021/tetherd/pull/22) — **left open**
-     (dependency change; merge policy excludes these from auto-merge
-     regardless of how safe the patch is).
+   - **PR**: [#22](https://github.com/mith2021/tetherd/pull/22) — left open
+     by this routine (dependency change; merge policy excludes these from
+     auto-merge regardless of how safe the patch is). **Merged by you** later
+     the same run.
 
 2. **Every `.scripts/*.mjs` run against a fresh `npm run dev`**: every
    Playwright-driven script (`screenshot.mjs`, `verify.mjs`,
@@ -87,9 +88,10 @@ scripts above.
    - Root cause is shared (both are "why can't this script drive the app
      right now") but the two failure modes are unrelated, so this was
      grouped into one PR rather than one bug — noted explicitly.
-   - **PR**: [#21](https://github.com/mith2021/tetherd/pull/21) — **left open**
-     (touches 7 files under `.scripts/`, well past the 1-file auto-merge
-     cap; no `src/` files touched).
+   - **PR**: [#21](https://github.com/mith2021/tetherd/pull/21) — left open
+     by this routine (touches 7 files under `.scripts/`, well past the
+     1-file auto-merge cap; no `src/` files touched). **Merged by you**
+     later the same run.
 
 3. **README.md / TODO.md skim against current code**: no factual drift
    found. Header menu structure, script names, build/dev commands, and
@@ -107,18 +109,23 @@ scripts above.
   verify).
 
 ### Awaiting your review
-- [#21](https://github.com/mith2021/tetherd/pull/21) — fixes all broken
-  `.scripts/*.mjs` (Playwright launch path + stale Settings-dialog
-  selectors). Left open: touches 7 files.
-- [#22](https://github.com/mith2021/tetherd/pull/22) — `npm audit fix` for
-  `fast-uri`. Left open: dependency version bump, never auto-merged
-  regardless of how safe.
+- Both PRs left open by this routine (#21, #22) were **reviewed and merged
+  by you within the same run** — nothing left awaiting review as of this
+  entry. See "Update" below.
+
+### Update (same run, after #21 and #22 merged)
+Re-synced to master after both open PRs merged. Re-ran the full verify
+suite and `tsc` against the merged result:
+- `npx tsc --noEmit -p tsconfig.app.json` — clean
+- Every `.scripts/verify-*.mjs` and `verify.mjs` — **all pass directly on
+  master now** (no more "passes on the open branch" caveat)
+- `npm audit` — 11 findings remain, all major-version-only (`vite-plugin-pwa`,
+  `shadcn`), matching what was flagged when #22 was opened; nothing new
 
 ### Remaining queue for next run
-- None from this run's audit. Next run should re-check Category A first as
-  always, then re-run the full `.scripts/verify-*.mjs` suite once #21 is
-  merged (or re-diagnose independently if it's still open) to confirm
-  master itself is green, not just the open branch.
+- None from this run's audit. Category A and Category B are both clean —
+  every found item shipped and verified against master directly, not just
+  an open branch.
 - `npm audit`'s 11 remaining findings (major bumps to `vite-plugin-pwa` /
   `shadcn`) are a standing human-scoping item, not something to
   auto-attempt — re-flag if they're still open next run rather than
@@ -137,23 +144,16 @@ scripts above.
   unattended pass should make alone. Flagging for a scoped look, not
   auto-fixing.
 
-### Verify script status (as of this run, against master HEAD post-merge)
-- `.scripts/verify-strictmode-double-complete.mjs` — **PASS** (new this run)
-- `.scripts/verify-session-recording.mjs` — **PASS** (new this run)
-- `.scripts/verify-pause.mjs` — currently **fails to launch** on master in
-  this container (pre-existing Playwright executablePath issue); fix is in
-  open PR #21, passes on that branch
-- `.scripts/verify-rice.mjs` — same as above; also had stale selectors,
-  both fixed in #21, passes on that branch
-- `.scripts/verify-layouts.mjs` — same launch issue on master; passes on
-  #21's branch
-- `.scripts/verify-music.mjs` — same launch issue on master; passes on
-  #21's branch
-- `.scripts/verify.mjs` — same launch issue on master; passes on #21's
-  branch
+### Verify script status (final, against master HEAD after #20/#21/#22 all merged)
+- `.scripts/verify-strictmode-double-complete.mjs` — **PASS**
+- `.scripts/verify-session-recording.mjs` — **PASS**
+- `.scripts/verify-pause.mjs` — **PASS**
+- `.scripts/verify-rice.mjs` — **PASS**
+- `.scripts/verify-layouts.mjs` — **PASS**
+- `.scripts/verify-music.mjs` — **PASS**
+- `.scripts/verify.mjs` — **PASS**
 - `.scripts/screenshot.mjs`, `.scripts/record-demo.mjs` (non-assert
-  utility scripts) — same launch issue on master; both run to completion
-  without erroring on #21's branch
+  utility scripts) — both run to completion without erroring
 - `.scripts/gen-favicons.mjs` — ran clean, byte-identical output to what's
   committed
 - `.scripts/video-to-gif.mjs` — not exercised (needs a real recorded
