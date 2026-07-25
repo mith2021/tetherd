@@ -63,9 +63,16 @@ export function useTimer({
   const rafRef = useRef<number | null>(null)
   const sessionStartRef = useRef<Date>(new Date()) // when the current running session began, for stats' startHour
 
+  // React StrictMode double-invokes mount effects in dev (setup -> cleanup -> setup
+  // again, same component instance, refs preserved) — without this guard the session
+  // finished-while-away below got logged twice on every dev mount.
+  const finishedElsewhereHandledRef = useRef(false)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (restoredFinishedElsewhere) handleComplete()
+    if (restoredFinishedElsewhere && !finishedElsewhereHandledRef.current) {
+      finishedElsewhereHandledRef.current = true
+      handleComplete()
+    }
   }, [])
 
   // persist enough state to survive a refresh: session type/count always, plus either
