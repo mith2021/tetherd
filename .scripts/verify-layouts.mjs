@@ -1,6 +1,7 @@
 import { chromium } from 'playwright'
+import { chromiumLaunchOptions } from './lib/launch.mjs'
 
-const browser = await chromium.launch()
+const browser = await chromium.launch(chromiumLaunchOptions())
 const page = await browser.newPage({ viewport: { width: 1280, height: 800 } })
 const errors = []
 page.on('pageerror', e => errors.push(String(e)))

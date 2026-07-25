@@ -1,6 +1,7 @@
 import { chromium } from 'playwright'
 import fs from 'node:fs'
 import path from 'node:path'
+import { chromiumLaunchOptions } from './lib/launch.mjs'
 
 const url = process.argv[2] || 'http://localhost:5173'
 const outDir = process.argv[3] || 'docs/video-tmp'
@@ -8,12 +9,14 @@ const outDir = process.argv[3] || 'docs/video-tmp'
 fs.rmSync(outDir, { recursive: true, force: true })
 fs.mkdirSync(outDir, { recursive: true })
 
-const browser = await chromium.launch({
-  args: [
-    '--use-fake-device-for-media-stream',
-    '--use-fake-ui-for-media-stream',
-  ],
-})
+const browser = await chromium.launch(
+  chromiumLaunchOptions({
+    args: [
+      '--use-fake-device-for-media-stream',
+      '--use-fake-ui-for-media-stream',
+    ],
+  })
+)
 const context = await browser.newContext({
   viewport: { width: 1000, height: 625 },
   recordVideo: { dir: outDir, size: { width: 1000, height: 625 } },
@@ -24,13 +27,15 @@ const page = await context.newPage()
 await page.goto(url, { waitUntil: 'networkidle' })
 await page.waitForTimeout(800)
 
-// start a focus session
-await page.click('body')
-await page.keyboard.press('Space')
-await page.waitForTimeout(1500)
+// the header (including the settings popovers below) hides itself while the
+// timer is running, so all settings customization has to happen before the
+// focus session starts, not after.
 
-// open settings, enable webcam presence
-await page.click('button:has(svg circle[cx="12"][cy="12"][r="3"])')
+// settings are 3 separate header popovers now (Timer / Background / App),
+// not a single tabbed dialog — open each in turn, closing before the next.
+
+// Timer settings: enable webcam presence
+await page.click('button[title="Timer settings"]')
 await page.waitForTimeout(600)
 
 const webcamSwitch = page.locator('text=Webcam presence detection').locator('..').locator('button[role="switch"]')
@@ -38,9 +43,11 @@ if (await webcamSwitch.count()) {
   await webcamSwitch.click()
   await page.waitForTimeout(1200)
 }
+await page.keyboard.press('Escape')
+await page.waitForTimeout(300)
 
-// appearance tab: backgrounds + accent + font
-await page.click('text=Appearance')
+// Background settings: backgrounds + accent + font
+await page.click('button[title="Background"]')
 await page.waitForTimeout(500)
 
 const bgThumbs = page.locator('button.aspect-video')
@@ -59,6 +66,12 @@ if (fs.existsSync(customBgPath)) {
   await newThumb.click()
   await page.waitForTimeout(1500)
 }
+await page.keyboard.press('Escape')
+await page.waitForTimeout(300)
+
+// App settings: timer font
+await page.click('button[title="App settings"]')
+await page.waitForTimeout(500)
 
 const fontButtons = page.locator('button[style*="font-family"]')
 const fontCount = await fontButtons.count()
@@ -69,6 +82,11 @@ for (let i = 0; i < Math.min(fontCount, 3); i++) {
 
 await page.keyboard.press('Escape')
 await page.waitForTimeout(400)
+
+// start a focus session
+await page.click('body')
+await page.keyboard.press('Space')
+await page.waitForTimeout(1500)
 
 // drag a widget around
 const widget = page.locator('[class*="cursor-grab"]').first()

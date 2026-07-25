@@ -1,10 +1,11 @@
 import { chromium } from 'playwright'
+import { chromiumLaunchOptions } from './lib/launch.mjs'
 import path from 'node:path'
 
 const outDir = process.argv[2]
 const url = 'http://localhost:5173'
 
-const browser = await chromium.launch()
+const browser = await chromium.launch(chromiumLaunchOptions())
 const page = await browser.newPage({ viewport: { width: 1280, height: 800 } })
 const errors = []
 page.on('console', (msg) => {
