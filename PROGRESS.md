@@ -2,6 +2,152 @@
 
 Log of the unattended correctness/repo-health routine. Newest run first.
 
+## 2026-07-26 03:03 UTC
+
+No `CLAUDE.md` present in this checkout (same as last run — gitignored,
+lives only on the machine that authored it). Proceeded from `README.md` +
+`TODO.md` + reading the actual code. `git log` and this file's previous
+entry were read first; no open PRs existed at run start (both #21/#22 from
+last run were already merged).
+
+### Category A — tracking/session correctness
+
+**Queue found this run:** picked up the one item left in last run's
+"Discovered, not fixed" section rather than re-auditing everything from
+scratch — the multi-tab race on `pomo-stats` flagged (but deliberately not
+fixed) last run.
+
+1. **Cross-tab `pomo-stats` write race could silently drop a session.**
+   `useLocalStorage`'s functional-update path applied the updater to
+   React's in-memory `prev`, not to whatever's currently in `localStorage`.
+   If tab A finishes a focus session and persists it, then tab B — holding
+   a stale in-memory copy from its own mount, with no `storage`-event
+   listener to refresh it — finishes its own session and calls
+   `setStats(prev => ...)`, tab B's write silently overwrote tab A's,
+   losing tab A's session entirely. Reproduced with two real Playwright
+   pages sharing one browser context/origin (i.e. two real tabs) against
+   the real dev server before touching any code — confirmed 1 session
+   survived instead of 2.
+   - **Root cause**: single-item, isolated to `useLocalStorage.ts`'s
+     `setAndPersist`. Nothing else in the multi-tab-race family was found —
+     this was the only item queued.
+   - **Fix, first attempt**: read `localStorage` fresh as the update base
+     instead of `prev`, inside the `setValue` updater. This closed the
+     cross-tab race but the verify script then caught a **new regression it
+     introduced**: React Strict Mode double-invokes a function passed to
+     `setValue` for purity-checking. With the fresh-read-from-localStorage
+     added *inside* that function, the second invocation saw the first
+     invocation's own just-persisted write as its new base and re-applied
+     the update — a single tab's own natural session completion started
+     recording every session twice. Caught by running the existing
+     `verify-session-recording.mjs`/`verify-strictmode-double-complete.mjs`
+     scripts after the first-attempt fix, per the "run everything, not just
+     the new script" rule — both still passed individually, but a
+     debug instrumentation pass on the new script showed
+     `pomo-stats` with 2 identical entries after a single completion.
+   - **Fix, corrected**: moved the fresh `localStorage` read and the
+     `persist()` call *out* of the `setValue` updater entirely — computed
+     once per real call to `setAndPersist`, then `setValue(resolved)` with
+     a plain value (not a function), so there's no updater function left
+     for Strict Mode to double-invoke.
+   - **Verify**: `.scripts/verify-multitab-race.mjs` (new) — two real
+     browser tabs sharing localStorage; tab A completes a quick focus
+     session, tab B (stale in-memory `pomo-stats` from its own mount) then
+     completes its own; asserts 2 sessions survive, not 1. Failed on master
+     before the fix (1 session), passed after both the fix and the
+     regression correction.
+   - **PR**: [#25](https://github.com/mith2021/tetherd/pull/25) —
+     **auto-merged** (exactly 1 source file, `src/hooks/useLocalStorage.ts`,
+     plus its own new `.scripts/verify-multitab-race.mjs`; Category A
+     correctness fix; `tsc` clean; verify script passing).
+
+No other Category A issues found this run. Re-audited `useTimer.ts`
+end-to-end (natural completion, skip, pause/resume including the webcam
+presence-detection auto-pause/resume path, reload while running/paused/
+awaiting-confirm, finished-while-backgrounded/closed) and every
+`setStats`/`pomo-stats` call site — all other paths already correctly
+hardened by prior work and covered by existing verify scripts.
+
+### Category B — repo health
+
+1. **`npm audit`**: still 11 findings (3 moderate, 8 high), all requiring
+   major/breaking bumps to `vite-plugin-pwa` or `shadcn` (dev-only CLI, not
+   shipped) per `npm audit fix --dry-run` — no safe non-breaking patch
+   available this run. Unchanged from last run; not re-flagging as new,
+   just confirming still standing and still out of this routine's authority
+   (major bumps need a human call).
+2. **Every script in `.scripts/*.mjs` run against a fresh `npm run dev`**:
+   all ran clean — `verify-layouts.mjs`, `verify-multitab-race.mjs` (new),
+   `verify-music.mjs`, `verify-pause.mjs`, `verify-rice.mjs`,
+   `verify-session-recording.mjs`, `verify-strictmode-double-complete.mjs`,
+   `verify.mjs` (needs an output-dir arg — that's its documented usage, not
+   a bug), `screenshot.mjs`, `record-demo.mjs`, `gen-favicons.mjs` (output
+   byte-identical to what's committed), `video-to-gif.mjs` (correctly
+   errors with a usage message given no input, not exercised further — no
+   code path touched this run). No selector drift or launch-path issues
+   found.
+3. **README.md skim against current code**: no drift found. Feature list
+   (backgrounds, glass UI, 5 timer fonts, ambient mixer, YouTube/Spotify
+   embeds, PiP, keyboard shortcuts, tab-away pause/presence confirmation)
+   all spot-checked against actual code and still accurate.
+4. **TODO.md skim against current code**: no drift found. Backlog items
+   ("Menu control audit" — `TimerMenu.tsx` still uses `Slider` for several
+   settings; "Custom presets" — no save-custom-preset code exists) are
+   still genuinely unimplemented. "Declined" items (theme export/import,
+   rice gallery, dedicated screenshot mode) confirmed not built. Nothing to
+   reconcile.
+
+### Auto-merged this run
+- [#25](https://github.com/mith2021/tetherd/pull/25) — cross-tab
+  `pomo-stats` race fix. 1 source file, Category A, `tsc` clean, new verify
+  script passing (plus full existing verify suite re-run clean after).
+
+### Awaiting your review
+- None. The only PR opened this run (#25) qualified for and received
+  auto-merge.
+
+### Remaining queue for next run
+- None from this run's audit. Category A's queue (the multi-tab race
+  carried over from last run) is now closed and verified against master
+  directly, not just an open branch.
+- `npm audit`'s 11 findings (major bumps to `vite-plugin-pwa` / `shadcn`)
+  remain a standing human-scoping item — re-flag if still open next run
+  rather than re-investigating from scratch.
+
+### Discovered, not fixed
+- **`sessionStartRef` resets on every resume, not just the original
+  start.** In `useTimer.ts`'s `start()`, `sessionStartRef.current = new
+  Date()` runs on every call, including resuming from a pause (manual,
+  tab-away, or webcam-presence auto-pause/resume). A session paused and
+  resumed across an hour boundary (or across midnight) records `startHour`/
+  `date` from the last resume time, not the session's true original start.
+  This does **not** affect the elapsed-time/duration recorded (`durationSec`
+  is always `settings.focusMin * 60` for a natural completion, unaffected
+  by this ref), so it's a minor analytics/heatmap accuracy nit, not a
+  "silently dropped" violation of this routine's core mandate. Flagging for
+  a scoped look, not auto-fixing — low severity, and a fix would need a
+  design decision about what "session start" should mean across a
+  multi-pause session (first start? most recent resume? something in
+  between?).
+
+### Verify script status (final, against master HEAD after #25 merged)
+- `.scripts/verify-strictmode-double-complete.mjs` — **PASS**
+- `.scripts/verify-session-recording.mjs` — **PASS**
+- `.scripts/verify-multitab-race.mjs` — **PASS** (new)
+- `.scripts/verify-pause.mjs` — **PASS**
+- `.scripts/verify-rice.mjs` — **PASS**
+- `.scripts/verify-layouts.mjs` — **PASS**
+- `.scripts/verify-music.mjs` — **PASS**
+- `.scripts/verify.mjs` — **PASS** (given an output-dir arg, its documented
+  usage)
+- `.scripts/screenshot.mjs`, `.scripts/record-demo.mjs` (non-assert utility
+  scripts) — both run to completion without erroring
+- `.scripts/gen-favicons.mjs` — ran clean, byte-identical output to what's
+  committed
+- `.scripts/video-to-gif.mjs` — not exercised (needs a real recorded
+  `.webm` input, correctly errors with a usage message when given none; no
+  code path touched this run)
+
 ## 2026-07-25 03:03 UTC
 
 No `CLAUDE.md` was present in the checkout — it's intentionally gitignored
