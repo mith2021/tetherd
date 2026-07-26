@@ -74,14 +74,27 @@ export function useLocalStorage<T>(key: string, initial: T) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key])
 
+  const valueRef = useRef(value)
+  valueRef.current = value
+
+  // For functional updates, rebase on what's currently in localStorage rather than
+  // trusting React's in-memory `value` — another tab can have written a newer value
+  // since this tab last read/wrote, and blindly applying the updater to a stale
+  // base would silently overwrite that tab's write (e.g. two tabs each finishing
+  // a focus session: the second tab's stats update must build on the first tab's
+  // already-persisted session, not on the empty array it had in memory at mount).
+  // Resolved and persisted here, outside the setValue call — React's Strict Mode
+  // double-invokes a *function* passed to setValue to check for purity, and since
+  // the fresh localStorage read makes each invocation see the previous
+  // invocation's own write, doing this inside that function would double-apply
+  // the update on every call in dev.
   const setAndPersist: Dispatch<SetStateAction<T>> = useCallback(
     (next) => {
       hydratedFromMirror.current = true
-      setValue((prev) => {
-        const resolved = typeof next === 'function' ? (next as (p: T) => T)(prev) : next
-        persist(key, resolved)
-        return resolved
-      })
+      const resolved =
+        typeof next === 'function' ? (next as (p: T) => T)(loadWithFallback(key, valueRef.current)) : next
+      persist(key, resolved)
+      setValue(resolved)
     },
     [key],
   )
