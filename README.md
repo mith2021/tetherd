@@ -14,7 +14,7 @@ Most Pomodoro timers look like a Pomodoro timer. Tetherd is built to actually ma
 
 - **Custom backgrounds** — upload your own image, gif, or video; reposition and adjust overlay darkness
 - **Glass UI** — blur/transparency intensity is a live slider, not a fixed theme
-- **Drag & resize widgets** — timer, tasks, stats — with saved layout presets
+- **Drag & resize widgets** — timer, tasks — with saved layout presets
 - **5 timer fonts**, configurable accent color
 - **Tasks with pomodoro counts**, session tracking, stats heatmap
 - **Ambient sound mixer** + YouTube/Spotify embeds that keep playing even when popovers close
