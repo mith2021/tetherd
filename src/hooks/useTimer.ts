@@ -62,6 +62,15 @@ export function useTimer({
   const endTimeRef = useRef<number | null>(restoredRunning ? initial.endTime : null) // epoch ms when timer should hit 0
   const rafRef = useRef<number | null>(null)
   const sessionStartRef = useRef<Date>(new Date()) // when the current running session began, for stats' startHour
+  // tick() below is memoized once (empty deps) so its rAF loop never gets torn down/
+  // rescheduled by a render — calling handleComplete directly would forever invoke the
+  // very first render's closure, whose sessionType/settings never advance past their
+  // initial values. A session that auto-advances into a next auto-started session (e.g.
+  // a completed focus session auto-starting a break) would then have that next
+  // session's own completion also seen as sessionType === 'focus' by the stale
+  // closure, logging a break as a second, spurious focus session. Always call
+  // handleCompleteRef.current() instead, kept pointed at the latest render's version.
+  const handleCompleteRef = useRef<() => void>(() => {})
 
   // React StrictMode double-invokes mount effects in dev (setup -> cleanup -> setup
   // again, same component instance, refs preserved) — without this guard the session
@@ -99,11 +108,26 @@ export function useTimer({
     if (remaining <= 0) {
       setRunning(false)
       endTimeRef.current = null
-      handleComplete()
+      handleCompleteRef.current()
       return
     }
     rafRef.current = requestAnimationFrame(tick)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Directly (re)starts the rAF loop — called from start() below, not left to the
+  // mount/running effect alone. React 19 auto-batches the setRunning(false) then
+  // setRunning(true) that happen inside a single tick()->finishCompletion()->
+  // advance()->start() call (auto-advancing into an auto-started next session):
+  // `running`'s value is true both before and after that batch, so an effect keyed
+  // to [running, tick] never observes a change and never reschedules a frame. The
+  // countdown then silently freezes forever and no session after the first one in
+  // an auto-started chain ever gets recorded. Calling this here guarantees a fresh
+  // frame is scheduled on every real start, regardless of what running's net value
+  // looks like to React.
+  function scheduleTick() {
+    if (rafRef.current) cancelAnimationFrame(rafRef.current)
+    rafRef.current = requestAnimationFrame(tick)
+  }
 
   useEffect(() => {
     if (running) {
@@ -163,6 +187,7 @@ export function useTimer({
     }
     finishCompletion()
   }
+  handleCompleteRef.current = handleComplete
 
   // advances to the next session type/auto-start, without logging a completed session
   function advance() {
@@ -221,6 +246,7 @@ export function useTimer({
     setSessionType(useType)
     setRunning(true)
     persistNow({ sessionType: useType, focusCount, secondsLeft: secs, endTime: endTimeRef.current })
+    scheduleTick()
   }
 
   function pause() {
