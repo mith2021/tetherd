@@ -2,6 +2,231 @@
 
 Log of the unattended correctness/repo-health routine. Newest run first.
 
+## 2026-07-28 03:38 UTC
+
+No `CLAUDE.md` present in this checkout (same as every prior run — gitignored,
+lives only on the machine that authored it). Proceeded from `README.md` +
+`TODO.md` + reading the actual code. `git log` and this file's previous entry
+were read first; last run's queue was empty (only the standing `npm audit`
+major-bump item was carried forward as a known non-actionable item).
+
+### Category A — tracking/session correctness
+
+**Queue found this run:** both items below were found fresh this run while
+re-auditing `useTimer.ts`'s rAF/completion path end-to-end (not carried over
+from a prior run's queue) — neither had been exercised by the existing verify
+suite, which never ran a session through more than one completion in a single
+mount, and never opened two tabs onto the *same* live session.
+
+1. **Auto-started sessions freeze after the first one, silently dropping every
+   session after it.** With `autoStartBreaks`/`autoStartFocus` on, a completed
+   session auto-starts the next one inside a single synchronous `tick()` call.
+   React 19 batches the `setRunning(false)` then `setRunning(true)` that
+   happens in that call, so `running`'s *net* value looks unchanged to the
+   effect that reschedules the animation-frame loop — it never re-fires, and
+   the countdown silently freezes forever after the first auto-advance.
+   Reproduced by seeding short focus/break durations with both auto-start
+   settings on, starting once, and watching the document title (used as a
+   countdown proxy) get stuck on the break's initial value forever instead of
+   counting down.
+   - **A second bug was hiding behind the freeze**: unfreezing the loop
+     (first fix attempt) immediately exposed that `tick()` is memoized once
+     (`useCallback` with an empty dep array), so its call to `handleComplete()`
+     was permanently bound to the very first render's closure, whose
+     `sessionType` never advances past its initial value. Once ticking
+     resumed, every completion — including breaks — was evaluated as
+     `sessionType === 'focus'`, logging each break as a second, spurious
+     focus session (confirmed by an instrumented debug run showing 2x the
+     expected session count, matching one phantom entry per break).
+   - **Root cause**: both bugs live in the same `tick()`/`start()` mechanism,
+     found and fixed together on one branch as a single item (not two
+     separately-queued items — the second bug was undetectable until the
+     first was fixed, so there was never a point where they could have been
+     queued/fixed independently).
+   - **Fix**: `start()` now directly (re)schedules the animation-frame loop
+     instead of relying solely on the `running`-keyed effect; `tick()` calls
+     completion through `handleCompleteRef` (a ref kept pointed at the latest
+     render's `handleComplete`), the same pattern already used elsewhere in
+     this file for `activeTaskTitleRef`.
+   - **Verify**: `.scripts/verify-autostart-chain.mjs` (new) — drives a real
+     2s-focus/1s-break auto-start chain against the dev server, asserts the
+     countdown keeps cycling through Focus/Break (no freeze) and exactly one
+     stats entry is recorded per real focus completion. Failed on master
+     before the fix (frozen after ~3s, 1 session recorded in a 10s window
+     instead of 3); passes after.
+   - **PR**: [#27](https://github.com/mith2021/tetherd/pull/27) —
+     **auto-merged** (exactly 1 source file, `src/hooks/useTimer.ts`, plus its
+     own new `.scripts/verify-autostart-chain.mjs`; Category A correctness
+     fix; `tsc` clean; verify script passing; no CI configured on this repo to
+     wait on).
+
+2. **Same session double-recorded when the app is open in two tabs at once.**
+   If a second tab is opened while a focus session is already running (or a
+   session finishes while two tabs both had it loaded), each tab runs its own
+   independent countdown racing toward the SAME persisted `endTime` in
+   `pomo-timer-state-v1`, with no coordination between them. Both tabs can
+   detect completion around the same moment and each logs its own stats
+   entry for what is really the same one session. Different mechanism from
+   the multi-tab race fixed in #25 (that one was two *different* sessions
+   racing on the `pomo-stats` write); this one is two tabs racing to claim
+   completion of the *same* session. Reproduced with two real Playwright
+   pages sharing one browser context/origin, both loading the same live
+   `endTime` — confirmed 2 sessions survived instead of 1.
+   - **Root cause**: isolated to `useTimer.ts` — no coordination existed
+     between tabs racing the same `endTime`. Single item, not grouped with
+     item 1 above (different mechanism — that one was about the loop
+     stopping; this one is about two tabs both successfully completing the
+     same session with no lock between them). Built on top of item 1's
+     `handleCompleteRef`/`scheduleTick` (this fix's branch was created after
+     #27 merged, from the updated master, so the diff here is isolated to
+     just this fix).
+   - **Fix**: `navigator.locks` (Web Locks API) gives real cross-tab mutual
+     exclusion — a plain localStorage read-then-write isn't atomic across
+     tabs, since two tabs can both read "unclaimed" before either writes a
+     claim. Only the tab that wins the lock may record the completion; it
+     immediately clears the shared `endTime` so any other tab still racing
+     toward it loses the claim. A tab that loses resyncs its local state from
+     whatever the winner persisted instead of staying stuck on the stale,
+     already-completed session. Falls back to proceeding uncoordinated if
+     `navigator.locks` isn't available (no regression vs. before this fix in
+     that case).
+   - **Verify**: `.scripts/verify-same-session-two-tabs.mjs` (new) — seeds one
+     shared live session's `endTime` into two real tabs sharing
+     localStorage/origin, asserts `pomo-stats` ends up with exactly 1 session.
+     Failed on master before the fix (2 sessions); passes after.
+   - **PR**: [#28](https://github.com/mith2021/tetherd/pull/28) — **left open**
+     by this routine. Meets the mechanical auto-merge bar (1 source file plus
+     its own verify script, Category A, `tsc` clean, verify passing), but
+     introduces a new browser API (`navigator.locks`) and a new resync code
+     path for the losing tab — a more significant design decision than a
+     mechanical fix, so flagged for your review rather than auto-merged on
+     that judgment call.
+
+No other Category A issues found this run. Re-audited `useLocalStorage.ts`
+(the cross-tab-safe functional-update path from #25 is still correct and
+unaffected by anything above) and every other `setStats`/`pomo-stats` call
+site in `App.tsx` and `useTimer.ts` (skip, pause/resume/reload,
+finished-while-backgrounded/closed, webcam presence auto-pause/resume) — all
+already correctly hardened by prior work and unaffected by this run's two
+fixes.
+
+### Category B — repo health
+
+1. **`npm audit`**: `@hono/node-server` (moderate, GHSA-frvp-7c67-39w9, path
+   traversal via encoded backslash on Windows), transitive via
+   `shadcn -> @modelcontextprotocol/sdk` (dev-only CLI, not shipped). Fixed
+   via plain `npm audit fix` (patch 1.19.15 -> 2.0.12), lockfile-only, no
+   `package.json` change. 8 remaining findings (high, `brace-expansion` via
+   `vite-plugin-pwa`'s `workbox-build` chain) all require
+   `npm audit fix --force` (major bump to `vite-plugin-pwa`) — left alone,
+   flagged for a human call, matching the standing item from every prior run.
+   - Stop condition: `tsc --noEmit` clean + full existing verify suite
+     re-run clean against the dev server with the updated lockfile (dependency-
+     only change, no meaningful browser behavior to write a new verify script
+     for, per the routine's own exception).
+   - **PR**: [#29](https://github.com/mith2021/tetherd/pull/29) — **left
+     open** (dependency change; excluded from auto-merge regardless of how
+     safe the patch is, per merge policy).
+2. **Every script in `.scripts/*.mjs` run against a fresh `npm run dev`**: all
+   ran clean — `verify-autostart-chain.mjs` (new), `verify-layouts.mjs`,
+   `verify-multitab-race.mjs`, `verify-music.mjs`, `verify-pause.mjs`,
+   `verify-rice.mjs`, `verify-session-recording.mjs`,
+   `verify-strictmode-double-complete.mjs`, `verify.mjs` (needs an output-dir
+   arg — documented usage, not a bug), `screenshot.mjs`, `record-demo.mjs`,
+   `gen-favicons.mjs` (output byte-identical to what's committed). Also ran
+   `video-to-gif.mjs` **end-to-end for the first time in this routine's
+   history** (prior runs only confirmed its no-input usage-message path) —
+   fed it a real `.webm` from `record-demo.mjs`'s output, produced a valid
+   `.gif` via ffmpeg with no errors. No selector drift or launch-path issues
+   found anywhere in the suite.
+3. **README.md skim against current code**: found and fixed one small factual
+   drift — the feature list claimed drag/resize applies to "timer, tasks,
+   stats", but `App.tsx` only registers `timer` and `tasks` with
+   `useWidgetLayout`; Stats is a dialog, not a `DraggableWidget` (this exact
+   distinction was already noted in TODO.md's 2026-07-24 "Done" section, just
+   never corrected in the README itself). Everything else spot-checked
+   (5 timer fonts, keyboard shortcuts, tab-away pause, deploy workflow/`vite
+   base` match) still accurate.
+   - Stop condition: reading the diff — doc-only change, nothing to
+     type-check or verify with a browser script.
+   - **PR**: [#30](https://github.com/mith2021/tetherd/pull/30) —
+     **auto-merged** (1 file, doc-only Category B fix, no dependency change).
+4. **TODO.md skim against current code**: no drift found. "Menu control
+   audit" (TimerMenu.tsx still uses `Slider` for most settings) and "Custom
+   presets" (no save-custom-preset code exists) are still genuinely
+   unimplemented. "Declined" items (theme export/import, rice gallery,
+   dedicated screenshot mode) confirmed still not built. Nothing to
+   reconcile.
+
+### Auto-merged this run
+- [#27](https://github.com/mith2021/tetherd/pull/27) — auto-start chain
+  freeze + break-double-logged-as-focus fix. 1 source file, Category A,
+  `tsc` clean, new verify script passing (plus full existing verify suite
+  re-run clean after).
+- [#30](https://github.com/mith2021/tetherd/pull/30) — README widget-list
+  factual fix. 1 file, doc-only Category B fix.
+
+### Awaiting your review
+- [#28](https://github.com/mith2021/tetherd/pull/28) — same-session
+  two-tab double-count fix. Meets the mechanical auto-merge bar but
+  introduces a new browser API (`navigator.locks`) and a new resync path —
+  flagged as a judgment call rather than auto-merged.
+- [#29](https://github.com/mith2021/tetherd/pull/29) — `npm audit fix`
+  lockfile patch. Dependency change; always left open regardless of safety,
+  per merge policy.
+
+### Remaining queue for next run
+- Re-check whether #28 and #29 were merged; if either is still open, don't
+  re-diagnose — just confirm it still applies cleanly and re-flag.
+- `npm audit`'s 8 remaining findings (major bump to `vite-plugin-pwa`) remain
+  a standing human-scoping item — re-flag if still open next run rather than
+  re-investigating from scratch.
+- No other Category A or B items outstanding from this run's audit.
+
+### Discovered, not fixed
+- **`sessionStartRef` resets on every resume, not just the original start**
+  (carried over from the 2026-07-26 run, still unaddressed, still low
+  severity): in `useTimer.ts`'s `start()`, `sessionStartRef.current = new
+  Date()` runs on every call including resuming from a pause. A session
+  paused and resumed across an hour boundary (or midnight) records
+  `startHour`/`date` from the last resume, not the session's true original
+  start. Does **not** affect `durationSec` (always correct), so it's an
+  analytics/heatmap accuracy nit, not a "silently dropped/double-counted"
+  violation. Still flagging rather than auto-fixing — needs a design decision
+  about what "session start" should mean across a multi-pause session.
+- **`.scripts/verify-rice.mjs` writes screenshots into a literal `undefined/`
+  directory if run without its documented output-dir arg** (`path:
+  process.argv[2] + '/rice-1-appearance.png'`, `process.argv[2]` is
+  `undefined` when omitted). Same pre-existing pattern already documented as
+  "not a bug, documented usage" for `verify.mjs` in prior runs' PROGRESS
+  entries — but unlike `verify.mjs`, this one doesn't fail loudly when
+  misused, it silently creates junk output in the repo root. Low severity
+  (cosmetic script robustness, not a correctness issue), cleaned up the
+  stray directory each time it appeared this run rather than committing it.
+  Worth a small follow-up (default to a tmp/scratch dir, or fail with a usage
+  message like `video-to-gif.mjs` does) but out of scope for this pass.
+
+### Verify script status (final, against master HEAD after #27/#30 merged)
+- `.scripts/verify-autostart-chain.mjs` — **PASS** (new)
+- `.scripts/verify-strictmode-double-complete.mjs` — **PASS**
+- `.scripts/verify-session-recording.mjs` — **PASS**
+- `.scripts/verify-multitab-race.mjs` — **PASS**
+- `.scripts/verify-pause.mjs` — **PASS**
+- `.scripts/verify-rice.mjs` — **PASS**
+- `.scripts/verify-layouts.mjs` — **PASS**
+- `.scripts/verify-music.mjs` — **PASS**
+- `.scripts/verify.mjs` — **PASS** (given an output-dir arg, its documented
+  usage)
+- `.scripts/screenshot.mjs`, `.scripts/record-demo.mjs` (non-assert utility
+  scripts) — both run to completion without erroring
+- `.scripts/gen-favicons.mjs` — ran clean, byte-identical output to what's
+  committed
+- `.scripts/video-to-gif.mjs` — exercised end-to-end this run for the first
+  time (real `.webm` in, valid `.gif` out via ffmpeg, no errors)
+- `.scripts/verify-same-session-two-tabs.mjs` — **PASS on its own branch**
+  (PR #28, not yet on master — this script doesn't exist on master until that
+  PR merges)
+
 ## 2026-07-26 03:03 UTC
 
 No `CLAUDE.md` present in this checkout (same as last run — gitignored,
