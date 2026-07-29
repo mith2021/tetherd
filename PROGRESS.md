@@ -2,6 +2,174 @@
 
 Log of the unattended correctness/repo-health routine. Newest run first.
 
+## 2026-07-29 03:04 UTC
+
+No `CLAUDE.md` present in this checkout (same as every prior run — gitignored,
+lives only on the machine that authored it). Proceeded from `README.md` +
+`TODO.md` + reading the actual code. `git log` and this file's previous entry
+were read first; last run's queue said to re-check #28 and #29 (both still
+open at run start) rather than re-diagnose, and to keep re-flagging the
+standing `npm audit` major-bump item.
+
+### Carried over from last run's queue
+- **#28** (same-session two-tab double-count fix, `navigator.locks`) and
+  **#29** (`npm audit fix` lockfile patch) were both still open, unchanged,
+  based on the pre-#30/#31 master. Did not re-diagnose either — test-merged
+  each onto current master in a scratch branch: both merge with zero
+  conflicts (only unrelated `PROGRESS.md`/`README.md` history from #30/#31
+  in between). Re-ran each branch's own stop condition against the merged
+  result: `tsc --noEmit` clean on both; #28's
+  `verify-same-session-two-tabs.mjs` plus the *full* existing verify suite
+  (7 other scripts) all pass on #28's merged branch; #29's `npm audit`
+  output on the merged branch still shows only the same 8 high findings
+  (major `vite-plugin-pwa` bump) after its `@hono/node-server` patch is
+  applied, matching what the PR claims. Both still apply cleanly — re-flagged
+  below, not re-opened or modified.
+
+### Category A — tracking/session correctness
+
+**Queue found this run:**
+1. **Elapsed focus time silently dropped when switching session type
+   mid-run.** The Focus/Short Break/Long Break pill row (`theme
+   .showSessionPills`, visible by default) calls `timer.switchType()` with no
+   guard against doing so while a focus session is actively running.
+   `skip()` already computes and records whatever focus time elapsed before
+   advancing; `switchType()` did not — it just reset state and persisted a
+   fresh session with **no stats write at all**. Clicking a different
+   session pill mid-focus-session (an ordinary, easily-discoverable UI
+   interaction — not an edge case) silently discarded however much focus
+   time had already elapsed. Reproduced against the real dev server before
+   touching any code: started a focus session, let ~3s of real elapsed time
+   pass, clicked "Short Break", `pomo-stats` ended up with **0** sessions
+   instead of 1 partial-duration one.
+   - **Root cause**: isolated to `useTimer.ts`'s `switchType()`. Not grouped
+     with anything else — this was the only Category A item found this run,
+     and no shared mechanism with #28/#29 above (those are cross-tab races;
+     this is a same-tab UI path with no elapsed-time accounting at all).
+   - **Fix**: extracted the elapsed-time-crediting logic already used by
+     `skip()` into a shared `recordElapsedFocus()` helper, called from both
+     `skip()` and `switchType()`, so both ways of abandoning a running focus
+     session early give the same partial-credit guarantee.
+   - **Verify**: `.scripts/verify-switchtype-drops-elapsed.mjs` (new) —
+     starts a focus session, waits ~3s of real elapsed time, clicks the
+     "Short Break" pill, asserts `pomo-stats` ends up with exactly 1
+     partial-duration session. Failed on master before the fix (0 sessions);
+     passes after.
+   - **PR**: [#32](https://github.com/mith2021/tetherd/pull/32) —
+     **auto-merged** (exactly 1 source file, `src/hooks/useTimer.ts`, plus
+     its own new `.scripts/verify-switchtype-drops-elapsed.mjs`; Category A
+     correctness fix; `tsc` clean; verify script passing; full existing
+     verify suite re-run clean after; no CI configured on this repo to wait
+     on).
+
+No other Category A issues found this run. Re-audited `useLocalStorage.ts`
+(unaffected, still correct) and every other `setStats`/`pomo-stats` call
+site in `App.tsx` and `useTimer.ts` — natural completion, skip, pause/
+resume/reload, finished-while-backgrounded/closed, webcam presence
+auto-pause/resume, tab-away auto-pause — all already correctly hardened by
+prior work and unaffected by this run's fix.
+
+### Category B — repo health
+
+1. **`npm audit`**: 8 high-severity findings remain on master as of this
+   run's start (`brace-expansion` via `vite-plugin-pwa`'s `workbox-build`
+   chain), all still requiring `npm audit fix --force` (major bump to
+   `vite-plugin-pwa`) — unchanged from last run, left alone, matching the
+   standing human-scoping item. PR #29 (open, patches the separate moderate
+   `@hono/node-server` finding) still applies cleanly and still leaves
+   exactly these same 8 findings after — see "carried over" note above.
+2. **Every script in `.scripts/*.mjs` run against a fresh `npm run dev`**:
+   all ran clean — `verify-autostart-chain.mjs`, `verify-layouts.mjs`,
+   `verify-multitab-race.mjs`, `verify-music.mjs`, `verify-pause.mjs`,
+   `verify-rice.mjs`, `verify-session-recording.mjs`,
+   `verify-strictmode-double-complete.mjs`,
+   `verify-switchtype-drops-elapsed.mjs` (new), `verify.mjs` (given an
+   output-dir arg, its documented usage), `screenshot.mjs` (given a URL then
+   an output path, its documented usage — args are positional, not "output
+   dir first"), `record-demo.mjs`, `gen-favicons.mjs` (output byte-identical
+   to what's committed, confirmed via `git status` showing no diff), and
+   `video-to-gif.mjs` (fed a real `.webm` from this run's `record-demo.mjs`
+   output, produced a valid `.gif` via ffmpeg with no errors). No selector
+   drift or launch-path issues found anywhere in the suite.
+3. **README.md skim against current code**: no drift found. Feature list
+   (backgrounds, glass UI, drag/resize on timer+tasks only, 5 timer fonts,
+   ambient mixer, YouTube/Spotify embeds, PiP, keyboard shortcuts, tab-away
+   pause/presence confirmation), tech stack versions (React 19.2, Tailwind
+   4.3, Base UI 1.6, Vite 8.1 — spot-checked against `package.json`), deploy
+   workflow (`.github/workflows/deploy.yml` exists) and `vite.config.ts`'s
+   `base: '/tetherd/'` all still accurate.
+4. **TODO.md skim against current code**: no drift found. "Menu control
+   audit" backlog item still valid — `TimerMenu.tsx` still has 7 `Slider`
+   usages. "Custom presets" still valid — no save-custom-preset code exists
+   (grepped for it). "Declined" items (theme export/import, rice gallery,
+   dedicated screenshot mode) confirmed still not built (grepped, no
+   matches beyond an unrelated `export function` hit). Nothing to
+   reconcile.
+
+### Auto-merged this run
+- [#32](https://github.com/mith2021/tetherd/pull/32) — elapsed focus time
+  dropped on mid-run session-type switch. 1 source file, Category A, `tsc`
+  clean, new verify script passing, full existing verify suite re-run clean
+  after.
+
+### Awaiting your review
+- [#28](https://github.com/mith2021/tetherd/pull/28) — same-session
+  two-tab double-count fix (`navigator.locks`). Carried over, unchanged;
+  re-confirmed this run that it still merges cleanly onto current master and
+  its own verify script plus the full suite still pass on the merged
+  result. Still flagged rather than auto-merged — new browser API + new
+  resync code path, a design decision rather than a mechanical fix.
+- [#29](https://github.com/mith2021/tetherd/pull/29) — `npm audit fix`
+  lockfile patch. Carried over, unchanged; re-confirmed this run that it
+  still merges cleanly and still leaves the same 8 major-bump-only findings
+  after. Dependency change; always left open regardless of safety, per merge
+  policy.
+
+### Remaining queue for next run
+- Re-check whether #28 and #29 were merged; if either is still open, don't
+  re-diagnose — just confirm it still applies cleanly and re-flag (same
+  process used this run).
+- `npm audit`'s 8 remaining findings (major bump to `vite-plugin-pwa`)
+  remain a standing human-scoping item — re-flag if still open next run
+  rather than re-investigating from scratch.
+- No other Category A or B items outstanding from this run's audit.
+
+### Discovered, not fixed
+- **`sessionStartRef` resets on every resume, not just the original start**
+  (carried over unaddressed, still low severity, unchanged from last run's
+  writeup): in `useTimer.ts`'s `start()`, `sessionStartRef.current = new
+  Date()` runs on every call including resuming from a pause. Does not
+  affect `durationSec` (always correct), so it's an analytics/heatmap
+  accuracy nit, not a "silently dropped/double-counted" violation. Still
+  flagging rather than auto-fixing — needs a design decision about what
+  "session start" should mean across a multi-pause session.
+- **`.scripts/verify-rice.mjs` writes screenshots into a literal `undefined/`
+  directory if run without its documented output-dir arg** (carried over,
+  still unaddressed, still low severity/cosmetic — same as last run's
+  writeup). Worth a small follow-up but out of scope for this pass.
+
+### Verify script status (final, against master HEAD after #32 merged)
+- `.scripts/verify-autostart-chain.mjs` — **PASS**
+- `.scripts/verify-strictmode-double-complete.mjs` — **PASS**
+- `.scripts/verify-session-recording.mjs` — **PASS**
+- `.scripts/verify-multitab-race.mjs` — **PASS**
+- `.scripts/verify-pause.mjs` — **PASS**
+- `.scripts/verify-rice.mjs` — **PASS**
+- `.scripts/verify-layouts.mjs` — **PASS**
+- `.scripts/verify-music.mjs` — **PASS**
+- `.scripts/verify.mjs` — **PASS** (given an output-dir arg, its documented
+  usage)
+- `.scripts/verify-switchtype-drops-elapsed.mjs` — **PASS** (new)
+- `.scripts/screenshot.mjs`, `.scripts/record-demo.mjs` (non-assert utility
+  scripts) — both run to completion without erroring
+- `.scripts/gen-favicons.mjs` — ran clean, byte-identical output to what's
+  committed
+- `.scripts/video-to-gif.mjs` — ran clean end-to-end (real `.webm` in, valid
+  `.gif` out via ffmpeg, no errors)
+- `.scripts/verify-same-session-two-tabs.mjs` — **PASS on its own branch**
+  (PR #28, not yet on master — this script doesn't exist on master until
+  that PR merges)
+
 ## 2026-07-28 03:38 UTC
 
 No `CLAUDE.md` present in this checkout (same as every prior run — gitignored,
