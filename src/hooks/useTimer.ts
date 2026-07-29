@@ -269,28 +269,32 @@ export function useTimer({
     persistNow({ sessionType, focusCount, secondsLeft: secs, endTime: null })
   }
 
-  // user-initiated skip: logs whatever focus time actually elapsed (not the full
-  // duration) before advancing — previously dropped that partial time entirely
+  // logs whatever focus time actually elapsed (not the full duration) when a
+  // focus session is abandoned early — shared by skip() and switchType() below,
+  // the two ways a session can be walked away from short of natural completion
+  function recordElapsedFocus() {
+    if (sessionType !== 'focus') return
+    const totalSecs = durationFor('focus', settings)
+    const elapsedSecs = totalSecs - secondsLeft
+    if (elapsedSecs <= 0) return
+    const start = sessionStartRef.current
+    setStats((prev) => ({
+      ...prev,
+      sessions: [
+        ...(prev.sessions ?? []),
+        {
+          date: todayKey(),
+          startHour: start.getHours(),
+          durationSec: elapsedSecs,
+          ...(activeTaskTitleRef.current ? { taskTitle: activeTaskTitleRef.current } : {}),
+        },
+      ],
+    }))
+  }
+
+  // user-initiated skip: credits whatever focus time actually elapsed before advancing
   function skip() {
-    if (sessionType === 'focus') {
-      const totalSecs = durationFor('focus', settings)
-      const elapsedSecs = totalSecs - secondsLeft
-      if (elapsedSecs > 0) {
-        const start = sessionStartRef.current
-        setStats((prev) => ({
-          ...prev,
-          sessions: [
-            ...(prev.sessions ?? []),
-            {
-              date: todayKey(),
-              startHour: start.getHours(),
-              durationSec: elapsedSecs,
-              ...(activeTaskTitleRef.current ? { taskTitle: activeTaskTitleRef.current } : {}),
-            },
-          ],
-        }))
-      }
-    }
+    recordElapsedFocus()
     endTimeRef.current = null
     setRunning(false)
     advance()
@@ -311,7 +315,11 @@ export function useTimer({
     }
   }
 
+  // manually switching session type (the Focus/Short Break/Long Break pills) is
+  // reachable at any time, including mid-focus-session — credit elapsed focus
+  // time the same way skip() does, or it silently vanishes
   function switchType(type: SessionType) {
+    recordElapsedFocus()
     const secs = durationFor(type, settings)
     endTimeRef.current = null
     setRunning(false)
