@@ -1,6 +1,10 @@
 import { chromium } from 'playwright'
 import { chromiumLaunchOptions } from './lib/launch.mjs'
 
+// falls back to a real directory instead of writing into a literal `undefined/`
+// when run without its documented output-dir arg
+const outDir = process.argv[2] || '.'
+
 const browser = await chromium.launch(chromiumLaunchOptions())
 const page = await browser.newPage({ viewport: { width: 1280, height: 800 } })
 const errors = []
@@ -14,7 +18,7 @@ await page.waitForTimeout(500)
 const buttons = await page.$$('header button')
 await buttons[buttons.length - 1].click()
 await page.waitForTimeout(400)
-await page.screenshot({ path: process.argv[2] + '/rice-1-appearance.png' })
+await page.screenshot({ path: outDir + '/rice-1-appearance.png' })
 
 // pick Doto font
 const fontButtons = await page.$$('[role="dialog"] button:has-text("25:00")')
@@ -31,7 +35,7 @@ await page.waitForTimeout(300)
 
 await page.keyboard.press('Escape')
 await page.waitForTimeout(400)
-await page.screenshot({ path: process.argv[2] + '/rice-2-doto-notasks.png' })
+await page.screenshot({ path: outDir + '/rice-2-doto-notasks.png' })
 
 const taskInput = await page.$('input[placeholder*="working on"]')
 console.log(taskInput ? 'FAIL: task list still visible' : 'PASS: task list hidden')
