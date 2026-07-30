@@ -2,6 +2,142 @@
 
 Log of the unattended correctness/repo-health routine. Newest run first.
 
+## 2026-07-30 03:03 UTC
+
+No `CLAUDE.md` present in this checkout (same as every prior run). `git log`
+and last run's queue were read first: it said to re-check whether #28/#29
+were merged (not re-diagnose), and flagged `npm audit`'s major-bump item and
+`verify-rice.mjs`'s `undefined/`-dir cosmetic issue as standing items.
+
+### Carried over from last run's queue
+- **#28** and **#29** were both still open, unchanged. Did not re-diagnose
+  either — test-merged each onto current master in a scratch branch (deleted
+  after): both merge with zero conflicts (only unrelated `PROGRESS.md`
+  history from #32/#33 in between; #28's `useTimer.ts` auto-merged cleanly).
+  Re-ran each branch's own stop condition on the merged result: `tsc
+  --noEmit` clean on both; #28's `verify-same-session-two-tabs.mjs` plus the
+  full existing verify suite (9 other scripts) pass on #28's merged branch;
+  #29's `npm audit` on the merged branch shows exactly the same 8 high
+  findings (major `vite-plugin-pwa` bump) after its `@hono/node-server`
+  patch, and its own full verify-suite re-run (9 scripts) also passes. Both
+  still apply cleanly — re-flagged below, not re-opened or modified.
+
+### Category A — tracking/session correctness
+
+Re-audited `useTimer.ts`, `useLocalStorage.ts`, and every `setStats`/
+`pomo-stats` call site in `App.tsx`. Two things specifically investigated
+this run, both concluded not to be bugs:
+
+1. **Hypothesis: presence-confirm modal bypassable via the session-type
+   pills.** While `awaitingConfirm` is true (focus session hit 0, waiting on
+   "Still there?"), `secondsLeft` is 0, so if `switchType()`'s
+   `recordElapsedFocus()` could fire during that window it would credit a
+   *full* session without ever confirming presence — a correctness bug in
+   the opposite direction from #32 (over-crediting instead of dropping).
+   Tested directly against the real dev server: seeded a 3s focus duration
+   with `confirmPresenceOnComplete` on, let it finish, then scripted a click
+   on the "Short Break" pill while the modal was up. The click timed out —
+   Base UI's modal `Dialog` (`disablePointerDismissal`) makes the rest of
+   the page `inert` while open, so the pill genuinely isn't clickable behind
+   the modal. `pomo-stats` stayed empty. Not reproducible — no fix needed.
+2. **`reset()` doesn't call `recordElapsedFocus()`.** Unlike `skip()`/
+   `switchType()`, hitting Reset (button or `R` key) mid-focus-session
+   discards elapsed time without recording it. Judged this as *not* a
+   silent-drop bug: Reset's whole purpose is "restart this session from
+   scratch," an explicit, deliberate discard the user chose (same category
+   as `discardSession()` after a presence-check timeout, already documented
+   in TODO.md as "Clarified, not a bug"), not an easily-mistaken UI path
+   like the pill-click #32 fixed. Flagging under "Discovered, not fixed"
+   below rather than auto-changing Reset's semantics, since redefining what
+   Reset means is a product decision outside this routine's scope.
+
+No other Category A issues found. Pause/resume/reload, finished-while-
+backgrounded/closed, webcam presence auto-pause/resume, tab-away auto-pause,
+and cross-tab races (via #28, still open) all remain correctly handled.
+
+### Category B — repo health
+
+1. **`npm audit`**: 8 high findings (major `vite-plugin-pwa` bump, unchanged,
+   still requires the human-scoped major bump) + 2 moderate
+   (`@hono/node-server` / `@modelcontextprotocol/sdk`, dev-only via
+   `shadcn`, patched by still-open PR #29). Unchanged from last run.
+2. **Every script in `.scripts/*.mjs` run against a fresh `npm run dev`**:
+   all 9 pre-existing `verify-*.mjs` scripts pass, plus `gen-favicons.mjs`
+   (output byte-identical to committed files), `screenshot.mjs`, `verify.mjs`
+   (given an outDir arg), `record-demo.mjs`, and `video-to-gif.mjs` (fed a
+   real `.webm` from `record-demo.mjs`'s output, produced a valid `.gif`).
+   **Found and fixed**: `verify-rice.mjs` writes into a literal `undefined/`
+   directory when run without its documented output-dir arg — carried over
+   as low-severity/cosmetic across the last two runs' "Discovered, not
+   fixed" sections. Fixed by defaulting to `.` (cwd), matching
+   `screenshot.mjs`'s existing `process.argv[N] || default` convention.
+   - **Verify**: no new verify script needed — the fix's subject *is* a
+     verify script; re-running it without an arg now writes into the cwd
+     (no `undefined/` dir created) and still reports `PASS: task list
+     hidden`. `tsc --noEmit` clean, full existing verify suite re-run clean
+     after.
+   - **PR**: [#34](https://github.com/mith2021/tetherd/pull/34) —
+     **auto-merged** (exactly 1 file, `.scripts/verify-rice.mjs`; Category B
+     script fix; `tsc` clean; fix manually re-verified working; no CI
+     configured to wait on).
+3. **README.md skim against current code**: no drift. Feature list, keyboard
+   shortcuts (Space/R/S), tab-away pause + presence confirmation, tech stack,
+   deploy workflow all still accurate.
+4. **TODO.md skim against current code**: no drift. "Menu control audit"
+   backlog item still valid (`TimerMenu.tsx` still has 7 `Slider` usages).
+   "Custom presets" still valid. "Declined" items (theme export/import, rice
+   gallery, dedicated screenshot mode) confirmed still not built (grepped,
+   no matches). Nothing to reconcile.
+
+### Auto-merged this run
+- [#34](https://github.com/mith2021/tetherd/pull/34) — `verify-rice.mjs`
+  `undefined/`-dir fix. 1 file, Category B script fix, `tsc` clean, fix
+  manually re-verified working, full existing verify suite re-run clean
+  after.
+
+### Awaiting your review
+- [#28](https://github.com/mith2021/tetherd/pull/28) — same-session two-tab
+  double-count fix (`navigator.locks`). Carried over, unchanged; re-confirmed
+  this run it still merges cleanly and its verify script plus the full suite
+  still pass on the merged result. Still flagged rather than auto-merged —
+  new browser API + new resync code path, a design decision.
+- [#29](https://github.com/mith2021/tetherd/pull/29) — `npm audit fix`
+  lockfile patch. Carried over, unchanged; re-confirmed this run it still
+  merges cleanly and still leaves the same 8 major-bump-only findings after.
+  Dependency change; always left open regardless of safety, per merge policy.
+
+### Remaining queue for next run
+- Re-check whether #28 and #29 were merged; if either is still open, don't
+  re-diagnose — just confirm it still applies cleanly and re-flag (same
+  process used this and last run).
+- `npm audit`'s 8 remaining findings (major bump to `vite-plugin-pwa`)
+  remain a standing human-scoping item — re-flag if still open rather than
+  re-investigating from scratch.
+- No other Category A or B items outstanding from this run's audit.
+
+### Discovered, not fixed
+- **`reset()` discards elapsed focus time without recording it** (new this
+  run, see Category A #2 above): judged as intentional "restart from
+  scratch" semantics rather than a silent-drop bug, since it's an explicit,
+  deliberate user action (unlike the #32 pill-click case). Flagging for a
+  human call on whether Reset should ever credit partial time — not
+  auto-changing product behavior unattended.
+- **`sessionStartRef` resets on every resume, not just the original start**
+  (carried over unaddressed, still low severity, unchanged): in
+  `useTimer.ts`'s `start()`, `sessionStartRef.current = new Date()` runs on
+  every call including resuming from a pause. Doesn't affect `durationSec`
+  (always correct), so it's an analytics/heatmap accuracy nit, not a
+  silently-dropped/double-counted violation. Still needs a design decision
+  about what "session start" should mean across a multi-pause session.
+
+### Status of every verify-*.mjs in the repo (this run, on master after #34)
+All pass: `verify-autostart-chain.mjs`, `verify-layouts.mjs`,
+`verify-multitab-race.mjs`, `verify-music.mjs`, `verify-pause.mjs`,
+`verify-rice.mjs`, `verify-session-recording.mjs`,
+`verify-strictmode-double-complete.mjs`, `verify-switchtype-drops-elapsed.mjs`.
+(`verify-same-session-two-tabs.mjs` exists only on open PR #28's branch, not
+yet on master — also passing there, see "carried over" above.)
+
 ## 2026-07-29 03:04 UTC
 
 No `CLAUDE.md` present in this checkout (same as every prior run — gitignored,
