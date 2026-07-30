@@ -72,18 +72,6 @@ export function useTimer({
   // handleCompleteRef.current() instead, kept pointed at the latest render's version.
   const handleCompleteRef = useRef<() => void>(() => {})
 
-  // React StrictMode double-invokes mount effects in dev (setup -> cleanup -> setup
-  // again, same component instance, refs preserved) — without this guard the session
-  // finished-while-away below got logged twice on every dev mount.
-  const finishedElsewhereHandledRef = useRef(false)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    if (restoredFinishedElsewhere && !finishedElsewhereHandledRef.current) {
-      finishedElsewhereHandledRef.current = true
-      handleComplete()
-    }
-  }, [])
-
   // persist enough state to survive a refresh: session type/count always, plus either
   // the live endTime (if running) or the paused secondsLeft — never both, so a reload
   // never resumes a countdown from stale wall-clock math.
@@ -99,6 +87,60 @@ export function useTimer({
     }
   }
 
+  // If a second tab is opened while a session is already running (or a session
+  // finishes while two tabs both had it loaded), each tab has its own independent
+  // countdown/mount-effect racing toward the SAME persisted endTime, with no
+  // coordination between them — both can detect completion and each logs its own
+  // stats entry for what is really the same one session. navigator.locks gives real
+  // cross-tab mutual exclusion (unlike a localStorage read-then-write, which two
+  // tabs can both pass before either writes): only the tab that wins the lock may
+  // record the completion; it immediately clears the shared endTime so any other
+  // tab still racing toward it loses the claim and must not log a duplicate.
+  async function claimSessionCompletion(expectedEndTime: number): Promise<boolean> {
+    if (typeof navigator === 'undefined' || !navigator.locks) return true // no Locks API — best effort, proceed uncoordinated
+    return navigator.locks.request('pomo-timer-completion-claim', async () => {
+      const persisted = loadPersisted(settings)
+      if (persisted.endTime !== expectedEndTime) return false
+      persistNow({ ...persisted, endTime: null })
+      return true
+    })
+  }
+
+  // A tab that loses the completion claim above is now out of sync with whatever
+  // the winning tab persisted (it may have already advanced to and started the next
+  // session) — pull the fresh state in rather than leaving this tab's UI frozen on
+  // the stale, already-completed session.
+  function syncFromPersisted() {
+    const persisted = loadPersisted(settings)
+    setSessionType(persisted.sessionType)
+    setFocusCount(persisted.focusCount)
+    if (persisted.endTime != null && persisted.endTime > Date.now()) {
+      endTimeRef.current = persisted.endTime
+      setRunning(true)
+      setSecondsLeft(Math.max(0, Math.ceil((persisted.endTime - Date.now()) / 1000)))
+      scheduleTick()
+    } else {
+      endTimeRef.current = null
+      setRunning(false)
+      setSecondsLeft(persisted.secondsLeft)
+    }
+  }
+
+  // React StrictMode double-invokes mount effects in dev (setup -> cleanup -> setup
+  // again, same component instance, refs preserved) — without this guard the session
+  // finished-while-away below got logged twice on every dev mount.
+  const finishedElsewhereHandledRef = useRef(false)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (restoredFinishedElsewhere && !finishedElsewhereHandledRef.current) {
+      finishedElsewhereHandledRef.current = true
+      claimSessionCompletion(initial.endTime!).then((won) => {
+        if (won) handleCompleteRef.current()
+        else syncFromPersisted()
+      })
+    }
+  }, [])
+
   // keep secondsLeft accurate even if tab was backgrounded (drift-proof via Date.now)
   const tick = useCallback(() => {
     if (endTimeRef.current == null) return
@@ -106,9 +148,13 @@ export function useTimer({
     const remaining = Math.max(0, Math.ceil(remainingMs / 1000))
     setSecondsLeft(remaining)
     if (remaining <= 0) {
+      const finishingEndTime = endTimeRef.current
       setRunning(false)
       endTimeRef.current = null
-      handleCompleteRef.current()
+      claimSessionCompletion(finishingEndTime).then((won) => {
+        if (won) handleCompleteRef.current()
+        else syncFromPersisted()
+      })
       return
     }
     rafRef.current = requestAnimationFrame(tick)
