@@ -37,7 +37,3 @@ npm run dev
 ## Deploying your own
 
 Pushes to `master` auto-deploy to GitHub Pages via the included workflow (`.github/workflows/deploy.yml`). Fork it, update `base` in `vite.config.ts` to match your repo name, enable Pages (Settings → Pages → Source: GitHub Actions).
-
-## Built with Claude Code
-
-This project was built with heavy use of [Claude Code](https://claude.com/claude-code). Happy to talk through any of the implementation in issues/comments.
